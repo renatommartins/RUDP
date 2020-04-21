@@ -11,5 +11,6 @@ namespace RUDP.Interfaces
 		void ShiftLeft(int amount);
 		byte[] ToBytes();
 		void FromBytes(byte[] buffer);
+		void FromBytes(byte[] buffer,int offset, int length);
 	}
 }
