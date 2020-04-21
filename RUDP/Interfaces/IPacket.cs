@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -15,5 +15,9 @@ namespace RUDP.Interfaces
 		PacketType Type { get; set; }
 		byte[] Data { get; set; }
 		uint Crc32 { get; set; }
+
+		byte[] ToBytes();
+		void FromBytes(byte[] buffer);
+		void FromBytes(byte[] buffer, int offset, int length);
 	}
 }
