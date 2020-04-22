@@ -11,7 +11,7 @@ namespace RUDP.Interfaces
 		bool Active { get; }
 		bool ExclusiveAddressUse { get; set; }
 		EndPoint LocalEndpoint { get; }
-		IRUDPSocket Server { get; }
+		IRudpPSocket Server { get; }
 
 		IRudpClient AcceptClient();
 		void AllowNatTraversal(bool allowed);

@@ -14,7 +14,7 @@ namespace RUDP.Interfaces
 
 		bool Active { get; set; }
 		int Available { get; }
-		IRUDPSocket Client { get; set; }
+		IRudpPSocket Client { get; set; }
 		bool Connected { get; }
 		bool ExclusiveAddressUse { get; set; }
 		LingerOption LingerState { get; set; }

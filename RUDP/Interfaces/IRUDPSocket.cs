@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RUDP.Interfaces
 {
-	public interface IRUDPSocket : ISocketBase, ISocket
+	public interface IRudpPSocket : ISocketBase, ISocket
 	{
 	}
 }
