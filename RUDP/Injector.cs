@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -30,6 +30,7 @@ namespace RUDP
 		private Dictionary<Type, Type> _typeDictionary = new Dictionary<Type, Type>()
 		{
 			{ typeof(IBitfield), typeof(Bitfield) },
+			{ typeof(IPacket), typeof(Packet) }
 		};
 
 		private T InjectorCreateInstance<T>()
