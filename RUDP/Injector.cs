@@ -14,7 +14,11 @@ namespace RUDP
 			get
 			{
 				if (_instance == null)
-					_instance = new Injector();
+					_instance = new Injector(new Dictionary<Type, Type>(){
+						{ typeof(IBitfield), typeof(Bitfield) },
+						{ typeof(IPacket), typeof(Packet) }
+						
+					});
 				return _instance;
 			}
 
@@ -27,11 +31,12 @@ namespace RUDP
 			}
 		}
 
-		private Dictionary<Type, Type> _typeDictionary = new Dictionary<Type, Type>()
+		private Dictionary<Type, Type> _typeDictionary;
+
+		public Injector(Dictionary<Type, Type> typeInjectionDictionary)
 		{
-			{ typeof(IBitfield), typeof(Bitfield) },
-			{ typeof(IPacket), typeof(Packet) }
-		};
+			_typeDictionary = typeInjectionDictionary;
+		}
 
 		private T InjectorCreateInstance<T>()
 		{
