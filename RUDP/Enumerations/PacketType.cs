@@ -7,6 +7,7 @@ namespace RUDP.Enumerations
 	public enum PacketType : ushort
 	{
 		ConnectionRequest,
+		ConnectionAccept,
 		DisconnectionNotify,
 		KeepAlive,
 		Data
