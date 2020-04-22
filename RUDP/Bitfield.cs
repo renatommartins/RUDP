@@ -21,7 +21,7 @@ namespace RUDP
 		/// <param name="byteSize">Size in bytes of the bitfield</param>
 		public Bitfield(int byteSize)
 		{
-			bitField = new bool[byteSize * 8];
+			bitfield = new bool[byteSize * 8];
 		}
 
 		/// <summary>
@@ -33,11 +33,11 @@ namespace RUDP
 		{
 			get
 			{
-				return bitField[index];
+				return bitfield[index];
 			}
 			set
 			{
-				bitField[index] = value;
+				bitfield[index] = value;
 			}
 		}
 
@@ -49,11 +49,11 @@ namespace RUDP
 		{
 			for (int j = 0; j < amount; j++)
 			{
-				for (int i = bitField.Length - 1; i > 0; i--)
+				for (int i = bitfield.Length - 1; i > 0; i--)
 				{
-					bitField[i] = bitField[i - 1];
+					bitfield[i] = bitfield[i - 1];
 				}
-				bitField[0] = false;
+				bitfield[0] = false;
 			}
 		}
 
@@ -65,11 +65,11 @@ namespace RUDP
 		{
 			for (int j = 0; j < amount; j++)
 			{
-				for (int i = 0; i < bitField.Length - 1; i++)
+				for (int i = 0; i < bitfield.Length - 1; i++)
 				{
-					bitField[i] = bitField[i + 1];
+					bitfield[i] = bitfield[i + 1];
 				}
-				bitField[bitField.Length - 1] = false;
+				bitfield[bitfield.Length - 1] = false;
 			}
 		}
 
@@ -79,13 +79,13 @@ namespace RUDP
 		/// <returns></returns>
 		public byte[] ToBytes()
 		{
-			byte[] returnArray = new byte[(int)Math.Ceiling((double)bitField.Length / 8)];
+			byte[] returnArray = new byte[(int)Math.Ceiling((double)bitfield.Length / 8)];
 
 			for (int i = 0; i < returnArray.Length; i++)
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					byte value = (byte)(bitField[i * 8 + j] ? 1 : 0);
+					byte value = (byte)(bitfield[i * 8 + j] ? 1 : 0);
 					returnArray[i] |= (byte)(value << (7 - j));
 				}
 			}
@@ -104,7 +104,7 @@ namespace RUDP
 
 		public void FromBytes(byte[] buffer, int offset, int length)
 		{
-			bitField = new bool[length * 8];
+			bitfield = new bool[length * 8];
 
 			for (int i = 0; i < length; i++)
 			{
@@ -112,11 +112,11 @@ namespace RUDP
 				{
 					if ((buffer[i + offset] & 1 << (7 - j)) > 0)
 					{
-						bitField[i * 8 + j] = true;
+						bitfield[i * 8 + j] = true;
 					}
 					else
 					{
-						bitField[i * 8 + j] = false;
+						bitfield[i * 8 + j] = false;
 					}
 				}
 			}
