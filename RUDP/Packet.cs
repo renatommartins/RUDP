@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -12,7 +12,8 @@ namespace RUDP
 		public ushort AppId { get; set; }
 		public ushort SequenceNumber { get; set; }
 		public ushort AckSequenceNumber { get; set; }
-		public IBitfield Bitfield { get; set; }
+
+		public IBitfield AckBitfield { get; set; }
 		public PacketType Type { get; set; }
 		public byte[] Data { get; set; }
 		public uint Crc32 { get; set; }
