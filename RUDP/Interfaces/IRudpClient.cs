@@ -4,10 +4,14 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 
+using RUDP.Enumerations;
+
 namespace RUDP.Interfaces
 {
 	public interface IRudpClient
 	{
+		public delegate void SendEventCallback(ushort sequenceNumber, RudpEvent sendEvent);
+
 		bool Active { get; set; }
 		int Available { get; }
 		IRUDPSocket Client { get; set; }
@@ -25,5 +29,6 @@ namespace RUDP.Interfaces
 		void Connect(string hostname, int port);
 		int Receive(byte[] buffer);
 		int Send(byte[] buffer);
+		int Send(byte[] buffer, out ushort seqNumber, SendEventCallback callback);
 	}
 }
