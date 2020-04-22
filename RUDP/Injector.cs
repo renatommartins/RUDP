@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -29,7 +29,7 @@ namespace RUDP
 
 		private Dictionary<Type, Type> _typeDictionary = new Dictionary<Type, Type>()
 		{
-			
+			{ typeof(IBitfield), typeof(Bitfield) },
 		};
 
 		private T InjectorCreateInstance<T>()
