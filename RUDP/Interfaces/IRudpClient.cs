@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Net;
@@ -14,7 +14,7 @@ namespace RUDP.Interfaces
 
 		bool Active { get; set; }
 		int Available { get; }
-		IRudpPSocket Client { get; set; }
+		IRudpSocket Client { get; set; }
 		bool Connected { get; }
 		bool ExclusiveAddressUse { get; set; }
 		LingerOption LingerState { get; set; }

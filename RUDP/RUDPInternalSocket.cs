@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
@@ -7,7 +7,7 @@ using RUDP.Interfaces;
 
 namespace RUDP
 {
-	internal class RudpInternalSocket : Socket, IRudpPSocket
+	internal class RudpInternalSocket : Socket, IRudpSocket
 	{
 		public RudpInternalSocket(SocketInformation socketInformation) : base(socketInformation)
 		{

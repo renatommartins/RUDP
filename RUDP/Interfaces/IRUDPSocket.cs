@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace RUDP.Interfaces
 {
-	public interface IRudpPSocket : ISocketBase, ISocket
+	public interface IRudpSocket : ISocketBase, ISocket
 	{
 	}
 }

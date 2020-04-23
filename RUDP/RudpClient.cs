@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -24,7 +24,7 @@ namespace RUDP
 		public int SendBufferSize { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 		public int UpdateRate { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-		private IRudpPSocket _socket;
+		private IRudpSocket _socket;
 
 		public void Close()
 		{
