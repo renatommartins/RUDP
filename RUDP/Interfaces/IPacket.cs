@@ -19,5 +19,6 @@ namespace RUDP.Interfaces
 		byte[] ToBytes();
 		void FromBytes(byte[] buffer);
 		void FromBytes(byte[] buffer, int offset, int length);
+		bool Validate(ushort appId, ushort lastSequenceNum);
 	}
 }

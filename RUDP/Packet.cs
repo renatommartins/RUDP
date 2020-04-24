@@ -158,5 +158,36 @@ namespace RUDP
 				   ((s1 < s2) && (s2 - s1 > ushort.MaxValue / 2));
 		}
 
+		public bool Validate(ushort appId, ushort lastSequenceNum)
+		{
+			if(AppId != appId)
+				return false;
+
+			if (!SequenceNumberGreaterThan(SequenceNumber, lastSequenceNum))
+				return false;
+
+			if (Type >= PacketType.Invalid)
+				return false;
+
+			switch(Type)
+			{
+				case PacketType.ConnectionAccept:
+					if (Data.Length < 4)
+						return false;
+					break;
+				case PacketType.Data:
+					if (Data.Length == 0)
+						return false;
+					break;
+				default:
+					break;
+			}
+
+			uint crcCheck = RUDP.Crc32.ComputeChecksum(_buffer, 0, _buffer.Length - 4);
+			if (crcCheck != Crc32)
+				return false;
+
+			return true;
+		}
 	}
 }
