@@ -8,8 +8,10 @@ namespace RUDP.Enumerations
 	{
 		ConnectionRequest,
 		ConnectionAccept,
+		ConnectionRefuse,
 		DisconnectionNotify,
 		KeepAlive,
-		Data
+		Data,
+		Invalid
 	}
 }
