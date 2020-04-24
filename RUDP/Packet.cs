@@ -9,51 +9,134 @@ namespace RUDP
 {
 	public class Packet : IPacket
 	{
+		private byte[] _buffer;
+
 		private const int _appIdOffset = 0;
-		public ushort AppId { get; set; }
+		public ushort AppId
+		{
+			get
+			{
+				return (ushort)((_buffer[_appIdOffset + 0] << 8) | (_buffer[_appIdOffset + 1] << 0));
+			}
+			set
+			{
+				if (_buffer == null)
+					_buffer = new byte[_dataOffset + 4];
+				_buffer[_appIdOffset + 0] = (byte)((value & 0xFF00) >> 8);
+				_buffer[_appIdOffset + 1] = (byte)((value & 0x00FF) >> 0);
+			}
+		}
 
 		private const int _seqNumOffset = _appIdOffset + sizeof(ushort);
-		public ushort SequenceNumber { get; set; }
+		public ushort SequenceNumber
+		{
+			get
+			{
+				return (ushort)((_buffer[_seqNumOffset + 0] << 8) | (_buffer[_seqNumOffset + 1] << 0));
+			}
+			set
+			{
+				if (_buffer == null)
+					_buffer = new byte[_dataOffset + 4];
+				_buffer[_seqNumOffset + 0] = (byte)((value & 0xFF00) >> 8);
+				_buffer[_seqNumOffset + 1] = (byte)((value & 0x00FF) >> 0);
+			}
+		}
 
 		private const int _ackSeqNumOffset = _seqNumOffset + sizeof(ushort);
-		public ushort AckSequenceNumber { get; set; }
+		public ushort AckSequenceNumber 
+		{
+			get
+			{
+				return (ushort)((_buffer[_ackSeqNumOffset + 0] << 8) | (_buffer[_ackSeqNumOffset + 1] << 0));
+			}
+			set
+			{
+				if (_buffer == null)
+					_buffer = new byte[_dataOffset + 4];
+				_buffer[_ackSeqNumOffset + 0] = (byte)((value & 0xFF00) >> 8);
+				_buffer[_ackSeqNumOffset + 1] = (byte)((value & 0x00FF) >> 0);
+			}
+		}
 
 		private const int _ackBitfieldOffset = _ackSeqNumOffset + sizeof(ushort);
-		public IBitfield AckBitfield { get; set; }
+		public IBitfield AckBitfield
+		{
+			get
+			{
+				IBitfield bitfield = Injector.CreateInstance<IBitfield>();
+				bitfield.FromBytes(_buffer, _ackBitfieldOffset, 4);
+				return bitfield;
+			}
+			set
+			{
+				if (_buffer == null)
+					_buffer = new byte[_dataOffset + 4];
+				Array.Copy(value.ToBytes(), 0, _buffer, _ackBitfieldOffset, 4);
+			}
+		}
 
 		private const int _typeOffset = _ackBitfieldOffset + sizeof(byte) * 4;
-		public PacketType Type { get; set; }
+		public PacketType Type
+		{
+			get
+			{
+				return (PacketType)((_buffer[_typeOffset + 0] << 8) | (_buffer[_typeOffset + 1] << 0));
+			}
+			set
+			{
+				if (_buffer == null)
+					_buffer = new byte[_dataOffset + 4];
+				_buffer[_typeOffset + 0] = (byte)(((ushort)value & 0xFF00) >> 8);
+				_buffer[_typeOffset + 1] = (byte)(((ushort)value & 0x00FF) >> 0);
+			}
+		}
 
 		private const int _dataOffset = _typeOffset + sizeof(ushort);
-		public byte[] Data { get; set; }
+		public byte[] Data
+		{
+			get
+			{
+				return _buffer.AsSpan(_dataOffset, _buffer.Length -( _dataOffset + 4)).ToArray();
+			}
+			set
+			{
+				byte[] newBuffer = new byte[_dataOffset + value.Length + 4];
+				Array.Copy(_buffer, 0, newBuffer, 0, _dataOffset);
+				Array.Copy(value, 0, newBuffer, _dataOffset, value.Length);
+				_buffer = newBuffer;
+			}
+		}
 
-		private int Crc32Offset { get => _dataOffset + sizeof(byte) * Data.Length; }
-		public uint Crc32 { get; set; }
+		private int Crc32Offset { get =>(_buffer.Length - 4); }
+		public uint Crc32
+		{
+			get
+			{
+				return (uint)(
+					(_buffer[Crc32Offset + 0] << 24) |
+					(_buffer[Crc32Offset + 1] << 16) |
+					(_buffer[Crc32Offset + 2] << 8) |
+					(_buffer[Crc32Offset + 3] << 0)
+					);
+			}
+			set
+			{
+				if (_buffer == null)
+					_buffer = new byte[_dataOffset + 4];
+				_buffer[Crc32Offset + 0] = (byte)((value & 0xFF000000) >> 24);
+				_buffer[Crc32Offset + 1] = (byte)((value & 0x00FF0000) >> 16);
+				_buffer[Crc32Offset + 2] = (byte)((value & 0x0000FF00) >> 8);
+				_buffer[Crc32Offset + 3] = (byte)((value & 0x000000FF) >> 0);
+			}
+		}
 
 		public byte[] ToBytes()
 		{
-			byte[] buffer = new byte[Crc32Offset + 4];
+			Crc32 = RUDP.Crc32.ComputeChecksum(_buffer, 0, Crc32Offset);
 
-			buffer[_appIdOffset + 0] = (byte)((AppId & 0xFF00) >> 8);
-			buffer[_appIdOffset + 1] = (byte)((AppId & 0x00FF) >> 0);
-
-			buffer[_seqNumOffset + 0] = (byte)((SequenceNumber & 0xFF00) >> 8);
-			buffer[_seqNumOffset + 1] = (byte)((SequenceNumber & 0x00FF) >> 0);
-
-			buffer[_ackSeqNumOffset + 0] = (byte)((AckSequenceNumber & 0xFF00) >> 8);
-			buffer[_ackSeqNumOffset + 1] = (byte)((AckSequenceNumber & 0x00FF) >> 0);
-
-			Array.Copy(AckBitfield.ToBytes(), 0, buffer, _ackBitfieldOffset, 4);
-
-			buffer[_typeOffset + 0] = (byte)(((ushort)Type & 0xFF00) >> 8);
-			buffer[_typeOffset + 1] = (byte)(((ushort)Type & 0x00FF) >> 0);
-
-			Array.Copy(Data, 0, buffer, _dataOffset, Data.Length);
-
-			buffer[Crc32Offset + 0] = (byte)((Crc32 & 0xFF000000) >> 24);
-			buffer[Crc32Offset + 1] = (byte)((Crc32 & 0x00FF0000) >> 16);
-			buffer[Crc32Offset + 2] = (byte)((Crc32 & 0x0000FF00) >> 8);
-			buffer[Crc32Offset + 3] = (byte)((Crc32 & 0x000000FF) >> 0);
+			byte[] buffer = new byte[_buffer.Length];
+			Array.Copy(_buffer, 0, buffer, 0, _buffer.Length);
 
 			return buffer;
 		}
@@ -65,38 +148,15 @@ namespace RUDP
 
 		public void FromBytes(byte[] buffer, int offset, int length)
 		{
-			AppId = (ushort)(
-				(buffer[_appIdOffset + offset + 0] << 8) |
-				(buffer[_appIdOffset + offset + 1] << 0)
-				);
-
-			SequenceNumber = (ushort)(
-				(buffer[_seqNumOffset + offset + 0] << 8) |
-				(buffer[_seqNumOffset + offset + 1] << 0)
-				);
-
-			AckSequenceNumber = (ushort)(
-				(buffer[_ackSeqNumOffset + offset + 0] << 8) |
-				(buffer[_ackSeqNumOffset + offset + 1] << 0)
-				);
-
-			AckBitfield = Injector.CreateInstance<IBitfield>();
-			AckBitfield.FromBytes(buffer, _ackBitfieldOffset + offset, 4);
-
-			Type = (PacketType)(
-				(buffer[_typeOffset + offset + 0] << 8) |
-				(buffer[_typeOffset + offset + 1] << 0)
-				);
-
-			Data = new byte[length - (_dataOffset + sizeof(uint))];
-			Array.Copy(buffer, _dataOffset + offset, Data, 0, Data.Length);
-
-			Crc32 = (uint)(
-				(buffer[Crc32Offset + offset + 0] << 24) |
-				(buffer[Crc32Offset + offset + 1] << 16) |
-				(buffer[Crc32Offset + offset + 2] << 8) |
-				(buffer[Crc32Offset + offset + 3] << 0)
-				);
+			_buffer = new byte[length];
+			Array.Copy(buffer, 0, _buffer, offset, length);
 		}
+
+		public bool SequenceNumberGreaterThan(ushort s1, ushort s2)
+		{
+			return ((s1 > s2) && (s1 - s2 <= ushort.MaxValue / 2)) ||
+				   ((s1 < s2) && (s2 - s1 > ushort.MaxValue / 2));
+		}
+
 	}
 }
