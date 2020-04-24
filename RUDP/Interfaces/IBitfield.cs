@@ -7,6 +7,7 @@ namespace RUDP.Interfaces
 	public interface IBitfield
 	{
 		bool this[int index] { get; set; }
+		void SetSize(int amount);
 		void ShiftRight(int amount);
 		void ShiftLeft(int amount);
 		byte[] ToBytes();

@@ -15,6 +15,11 @@ namespace RUDP
 
 		}
 
+		public void SetSize(int byteSize)
+		{
+			bitfield = new bool[byteSize * 8];
+		}
+
 		/// <summary>
 		/// Initializes an empty instance of Bitfield.
 		/// </summary>
