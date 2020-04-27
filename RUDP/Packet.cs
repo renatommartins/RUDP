@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -130,6 +130,21 @@ namespace RUDP
 				_buffer[Crc32Offset + 2] = (byte)((value & 0x0000FF00) >> 8);
 				_buffer[Crc32Offset + 3] = (byte)((value & 0x000000FF) >> 0);
 			}
+		}
+
+		public Packet()
+		{
+
+		}
+
+		public Packet(byte[] buffer)
+		{
+			FromBytes(buffer, 0, buffer.Length);
+		}
+
+		public Packet(byte[] buffer, int offset, int length)
+		{
+			FromBytes(buffer, offset, length);
 		}
 
 		public byte[] ToBytes()
