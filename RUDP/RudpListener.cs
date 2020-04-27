@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Text;
+using System.Net;
 
 using RUDP.Interfaces;
 
 namespace RUDP
 {
-	class RudpListener : IRudpListener
+	public class RudpListener
 	{
 		public bool Active => throw new NotImplementedException();
 

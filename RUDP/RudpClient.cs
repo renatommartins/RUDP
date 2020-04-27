@@ -3,18 +3,22 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 using RUDP.Interfaces;
+using RUDP.Enumerations;
 
 namespace RUDP
 {
-	class RudpClient : IRudpClient
+	public delegate void SendEventCallback(ushort seqNumber, RudpEvent sendEvent);
+
+	public class RudpClient
 	{
 		public bool Active { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
 		public int Available => throw new NotImplementedException();
 
-		public IRudpPSocket Client { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+		public IRudpSocket Client { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
 		public bool Connected => throw new NotImplementedException();
 
@@ -61,7 +65,7 @@ namespace RUDP
 			throw new NotImplementedException();
 		}
 
-		public int Send(byte[] buffer, out ushort seqNumber, IRudpClient.SendEventCallback callback)
+		public int Send(byte[] buffer, out ushort seqNumber, SendEventCallback callback)
 		{
 			throw new NotImplementedException();
 		}

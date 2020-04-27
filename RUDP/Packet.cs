@@ -7,7 +7,7 @@ using RUDP.Interfaces;
 
 namespace RUDP
 {
-	public class Packet : IPacket
+	public class Packet
 	{
 		private byte[] _buffer;
 
@@ -60,12 +60,11 @@ namespace RUDP
 		}
 
 		private const int _ackBitfieldOffset = _ackSeqNumOffset + sizeof(ushort);
-		public IBitfield AckBitfield
+		public Bitfield AckBitfield
 		{
 			get
 			{
-				IBitfield bitfield = Injector.CreateInstance<IBitfield>();
-				bitfield.FromBytes(_buffer, _ackBitfieldOffset, 4);
+				Bitfield bitfield = new Bitfield(_buffer, _ackBitfieldOffset, 4);
 				return bitfield;
 			}
 			set

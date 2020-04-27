@@ -6,7 +6,7 @@ using RUDP.Interfaces;
 
 namespace RUDP
 {
-	public class Bitfield : IBitfield
+	public class Bitfield
 	{
 		private bool[] bitfield;
 
@@ -27,6 +27,11 @@ namespace RUDP
 		public Bitfield(int byteSize)
 		{
 			bitfield = new bool[byteSize * 8];
+		}
+
+		public Bitfield(byte[] buffer, int offset, int length)
+		{
+			FromBytes(buffer, offset, length);
 		}
 
 		/// <summary>
