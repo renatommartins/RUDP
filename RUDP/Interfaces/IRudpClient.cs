@@ -10,8 +10,6 @@ namespace RUDP.Interfaces
 {
 	public interface IRudpClient
 	{
-		public delegate void SendEventCallback(ushort sequenceNumber, RudpEvent sendEvent);
-
 		bool Active { get; set; }
 		int Available { get; }
 		IRudpSocket Client { get; set; }

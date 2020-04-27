@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -97,7 +97,9 @@ namespace RUDP
 		{
 			get
 			{
-				return _buffer.AsSpan(_dataOffset, _buffer.Length -( _dataOffset + 4)).ToArray();
+				byte[] dataBuffer = new byte[_buffer.Length - (_dataOffset + 4)];
+				Array.Copy(_buffer, _dataOffset, dataBuffer, 0, dataBuffer.Length);
+				return dataBuffer;
 			}
 			set
 			{
