@@ -102,10 +102,13 @@ namespace RUDP
 			}
 			set
 			{
-				byte[] newBuffer = new byte[_dataOffset + value.Length + 4];
-				Array.Copy(_buffer, 0, newBuffer, 0, _dataOffset);
-				Array.Copy(value, 0, newBuffer, _dataOffset, value.Length);
-				_buffer = newBuffer;
+				if(value != null)
+				{
+					byte[] newBuffer = new byte[_dataOffset + value.Length + 4];
+					Array.Copy(_buffer, 0, newBuffer, 0, _dataOffset);
+					Array.Copy(value, 0, newBuffer, _dataOffset, value.Length);
+					_buffer = newBuffer;
+				}
 			}
 		}
 
