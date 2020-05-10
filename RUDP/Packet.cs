@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -168,7 +168,7 @@ namespace RUDP
 			Array.Copy(buffer, 0, _buffer, offset, length);
 		}
 
-		public bool SequenceNumberGreaterThan(ushort s1, ushort s2)
+		public static bool SequenceNumberGreaterThan(ushort s1, ushort s2)
 		{
 			return ((s1 > s2) && (s1 - s2 <= ushort.MaxValue / 2)) ||
 				   ((s1 < s2) && (s2 - s1 > ushort.MaxValue / 2));
