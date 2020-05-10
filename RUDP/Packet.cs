@@ -191,7 +191,7 @@ namespace RUDP
 			switch(Type)
 			{
 				case PacketType.ConnectionAccept:
-					if (Data.Length < 4)
+					if (Data.Length < 2)
 						return false;
 					break;
 				case PacketType.Data:
