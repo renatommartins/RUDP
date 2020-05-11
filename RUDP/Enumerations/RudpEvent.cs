@@ -8,6 +8,7 @@ namespace RUDP.Enumerations
 	{
 		Successful,
 		Dropped,
-		Delayed
+		Delayed,
+		Disconnected
 	}
 }
