@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -422,10 +422,7 @@ namespace RUDP
 					int receiveCount = _socket.ReceiveFrom(receiveBuffer, 0, receiveBuffer.Length, SocketFlags.None, ref endPoint);
 
 					if(endPoint.Equals(RemoteEndpoint))
-					{
-						Packet packet = new Packet(receiveBuffer, 0, receiveCount);
-						ReceiveUpdate(packet);
-					}					
+						ReceiveUpdate(new Packet(receiveBuffer, 0, receiveCount));
 				}
 				
 				if(_state == State.Connected)
