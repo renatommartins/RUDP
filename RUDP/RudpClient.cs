@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -239,6 +239,8 @@ namespace RUDP
 			Packet packet = null;
 			RudpEvent rudpEvent = RudpEvent.Successful;
 
+			//Checks if none of the last 32 packets sent were acknowledged.
+			//If true it assumes connection dropped.
 			if (Packet.SequenceNumberGreaterThan((ushort)(_nextSeqNumber - 1), (ushort)(_lastAckSeqNum + 32)))
 			{
 				packet = new Packet()
@@ -256,10 +258,12 @@ namespace RUDP
 			}
 			else
 				lock (_sendDataQueue)
+					// Sends a Data packet if there is data to be sent.
 					if (_sendDataQueue.Count > 0)
 					{
 						using (MemoryStream stream = new MemoryStream())
 						{
+							// Concatenates all pending data in a sigle byte array.
 							while (_sendDataQueue.Count > 0)
 							{
 								byte[] buffer = _sendDataQueue.Dequeue();
@@ -277,6 +281,7 @@ namespace RUDP
 							};
 						}
 					}
+					// Sends a KeepAlive packet if there is no data to send.
 					else
 					{
 						lock (_pendingAckPackets)
@@ -318,17 +323,22 @@ namespace RUDP
 		{
 			if (packet.Validate(AppId, _lastRemoteSeqNumber))
 			{
+				// Updates the received packet tracking from the remote host.
 				_remotePacketAcks.Add(_lastRemoteSeqNumber);
 				_remotePacketAcks.RemoveWhere(seqNum => !Packet.SequenceNumberGreaterThan(seqNum, (ushort)(packet.SequenceNumber - 33)));
 				_lastRemoteSeqNumber = packet.SequenceNumber;
 
+				// Updates sent packets acknowledgements.
 				lock(_pendingAckPackets)
 				{
+					// Clears the pending acknowledge packets.
+					// Starting by the sequence number acknowledge.
 					if (_pendingAckPackets.ContainsKey(packet.AckSequenceNumber))
 					{
 						_pendingAckPackets[packet.AckSequenceNumber]?.Invoke(packet.AckSequenceNumber, RudpEvent.Successful);
 						_pendingAckPackets.Remove(packet.AckSequenceNumber);
 					}
+					// Then the 32 previous using the bitfield.
 					for (ushort i = (ushort)(packet.AckSequenceNumber - 1), j = 0; Packet.SequenceNumberGreaterThan(i, (ushort)(packet.AckSequenceNumber - 33)); i--, j++)
 					{
 						if (packet.AckBitfield[j] == true && _pendingAckPackets.ContainsKey(i))
@@ -337,6 +347,7 @@ namespace RUDP
 							_pendingAckPackets.Remove(i);
 						}
 					}
+					// Sequence numbers behinds by more than 32 are considered dropped.
 					foreach (var pair in _pendingAckPackets.Where(seqNum => !Packet.SequenceNumberGreaterThan(seqNum.Key, (ushort)(packet.AckSequenceNumber - 33))).ToList())
 					{
 						_pendingAckPackets[pair.Key]?.Invoke(pair.Key, RudpEvent.Dropped);
@@ -389,9 +400,11 @@ namespace RUDP
 		/// </summary>
 		private void ClientThread()
 		{
+			// Instantiates and binds the actual socket
 			_socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			_socket.Bind(new IPEndPoint(IPAddress.Any, RemoteEndpoint.Port));
 
+			// Sends connection request for client mode.
 			_socket.SendTo(new Packet()
 			{
 				AppId = AppId,
@@ -403,11 +416,14 @@ namespace RUDP
 			RemoteEndpoint);
 
 			_isActive = true;
+
+			// Starts connection request timeout countdown
 			_timeoutStopwatch = new Stopwatch();
 			_timeoutStopwatch.Start();
 
 			byte[] receiveBuffer = new byte[4096];
 
+			// Connection handling main loop in client mode.
 			while (_isActive)
 			{
 				if (_timeoutStopwatch.ElapsedMilliseconds > 500)
@@ -416,6 +432,7 @@ namespace RUDP
 					_state = State.Disconnected;
 				}
 
+				// Executes receive update
 				if (_socket.Available > 0)
 				{
 					EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
@@ -427,6 +444,7 @@ namespace RUDP
 				
 				if(_state == State.Connected)
 					lock(_sendStopwatch)
+						// Executes send update based on the send rate.
 						if(_sendStopwatch.ElapsedMilliseconds >= 1000/SendRate)
 						{
 							_sendStopwatch.Restart();
@@ -439,6 +457,8 @@ namespace RUDP
 
 				Thread.Yield();
 			}
+
+			// Closes the connection and releases the socket.
 			_sendStopwatch?.Stop();
 			_timeoutStopwatch?.Stop();
 			Close();
