@@ -51,17 +51,22 @@ namespace RUDP
 			0xB3667A2E,0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D
 		};
 
+		public static uint ComputeChecksum(byte[] bytes)
+		{
+			return ComputeChecksum(bytes, 0, bytes.Length);
+		}
+
 		/// <summary>
 		/// Calculates the CRC-32 value of given <seealso cref="byte"/> array.
 		/// </summary>
 		/// <param name="bytes"><seealso cref="byte"/> array on which the CRC-32 is calculated from.</param>
 		/// <returns></returns>
-		public static uint ComputeChecksum(byte[] bytes)
+		public static uint ComputeChecksum(byte[] bytes, int offset, int length)
 		{
 			uint crc = init;
-			for (int i = 0; i < bytes.Length; i++)
+			for (int i = 0; i < length; i++)
 			{
-				byte index = (byte)((crc ^ bytes[i]) & 0xFF);
+				byte index = (byte)((crc ^ bytes[offset + i]) & 0xFF);
 				crc = (uint)((crc >> 8) ^ table[index]);
 			}
 
