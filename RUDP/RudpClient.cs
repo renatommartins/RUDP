@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -201,7 +201,19 @@ namespace RUDP
 						}
 					}
 					else
-						packet = GetKeepalivePacket();
+					{
+						lock (_pendingAckPackets)
+							_pendingAckPackets.Add(_nextSeqNumber, null);
+						packet = new Packet()
+						{
+							AppId = AppId,
+							SequenceNumber = _nextSeqNumber++,
+							AckSequenceNumber = _lastRemoteSeqNumber,
+							AckBitfield = GetReceivedBitfield(),
+							Type = PacketType.KeepAlive,
+							Data = null,
+						};
+					}
 
 			return (packet, rudpEvent);
 		}
@@ -286,20 +298,6 @@ namespace RUDP
 			}
 		}
 
-		internal Packet GetKeepalivePacket()
-		{
-			lock (_pendingAckPackets)
-				_pendingAckPackets.Add(_nextSeqNumber, null);
-			return new Packet()
-			{
-				AppId = AppId,
-				SequenceNumber = _nextSeqNumber++,
-				AckSequenceNumber = _lastRemoteSeqNumber,
-				AckBitfield = GetReceivedBitfield(),
-				Type = PacketType.KeepAlive,
-				Data = null,
-			};
-		}
 
 		private void ClientThread()
 		{
