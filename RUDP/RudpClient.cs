@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -68,32 +68,72 @@ namespace RUDP
 		/// </summary>
 		private IRudpSocket _socket;
 		/// <summary>
+		/// Keeps client mode communication thread running.
+		/// </summary>
+		private bool _isActive = false;
+		/// <summary>
 		/// Communication handling thread in client mode.
 		/// </summary>
 		private Thread _clientThread;
 		/// <summary>
-		/// Tracks send delay between packets in client mode.
+		/// Handles timing between sent packets in client mode.
 		/// </summary>
 		private Stopwatch _sendStopwatch;
+		/// <summary>
+		/// Handles time limit when connecting to remote host in client mode.
+		/// </summary>
 		private Stopwatch _timeoutStopwatch;
 
+		/// <summary>
+		/// Sequence number for the next packet.
+		/// </summary>
 		private ushort _nextSeqNumber = 0;
+		/// <summary>
+		/// Sequence number last acknowleged from the remote host.
+		/// </summary>
 		private ushort _lastAckSeqNum = 0;
+		/// <summary>
+		/// Data to be sent next packet.
+		/// </summary>
 		private Queue<byte[]> _sendDataQueue = new Queue<byte[]>();
+		/// <summary>
+		/// Table containing callback handle for sent packet events.
+		/// </summary>
 		private Dictionary<ushort, SendEventCallback> _pendingAckPackets = new Dictionary<ushort, SendEventCallback>();
 
+		/// <summary>
+		/// Data received from the remote host.
+		/// </summary>
 		private Queue<byte[]> _receiveDataQueue = new Queue<byte[]>();
+		/// <summary>
+		/// Last sequence number received from remote host.
+		/// </summary>
 		private ushort _lastRemoteSeqNumber = 0;
+		/// <summary>
+		/// Tracks which of the last 32 packets from remote host were received.
+		/// </summary>
 		private HashSet<ushort> _remotePacketAcks = new HashSet<ushort>();
 
+		/// <summary>
+		/// Client state.
+		/// </summary>
 		private State _state = State.Disconnected;
-		private bool _isActive = false;
 
+		/// <summary>
+		/// Creates a new RudpClient instance in client mode.
+		/// </summary>
+		/// <param name="appId"></param>
 		public RudpClient(ushort appId)
 		{
 			AppId = appId;
 		}
 
+		/// <summary>
+		/// Creates a new RudpClient instance in server mode.
+		/// </summary>
+		/// <param name="listener">Listener handling the communicaiton thread.</param>
+		/// <param name="endPoint">Remote host that this instance represents.</param>
+		/// <param name="seqNumInit">Starting sequence number.</param>
 		internal RudpClient(RudpListener listener, IPEndPoint endPoint, ushort seqNumInit)
 		{
 			this.Listener = listener;
@@ -104,21 +144,38 @@ namespace RUDP
 			_state = State.Connected;
 		}
 
+		/// <summary>
+		/// Closes connection.
+		/// </summary>
 		public void Close()
 		{
 			_isActive = false;
 		}
 
+		/// <summary>
+		/// Starts connection attemp to a remote host.
+		/// </summary>
+		/// <param name="address">Remote host IP address.</param>
+		/// <param name="port">Remote host port number.</param>
 		public void Connect(IPAddress address, int port)
 		{
 			Connect(new IPEndPoint(address, port));
 		}
 
+		/// <summary>
+		/// Starts connection attemp to a remote host.
+		/// </summary>
+		/// <param name="hostname">Remote host domain name.</param>
+		/// <param name="port">Remote host port number.</param>
 		public void Connect(string hostname, int port)
 		{
 			Connect(Dns.GetHostAddresses(hostname)[0], port);
 		}
 
+		/// <summary>
+		/// Starts connection attemp to a remote host.
+		/// </summary>
+		/// <param name="remoteEP">Remote host endpoint.</param>
 		public void Connect(IPEndPoint remoteEP)
 		{
 			RemoteEndpoint = remoteEP;
@@ -129,18 +186,34 @@ namespace RUDP
 			_clientThread.Start();
 		}
 
+		/// <summary>
+		/// Receives packet data in the order they were received.
+		/// </summary>
+		/// <returns>data from received packet.</returns>
 		public byte[] Receive()
 		{
 			lock(_receiveDataQueue)
 				return _receiveDataQueue.Dequeue();
 		}
 
+		/// <summary>
+		/// Queues data to be sent next packet.
+		/// </summary>
+		/// <param name="buffer">data to send.</param>
+		/// <returns>size of sent buffer.</returns>
 		public int Send(byte[] buffer)
 		{
 			ushort seqNum;
 			return Send(buffer, out seqNum, null);
 		}
 
+		/// <summary>
+		/// Queues data to be sent next packet.
+		/// </summary>
+		/// <param name="buffer">data to send.</param>
+		/// <param name="seqNumber">sequence number of the packet that will carry the data.</param>
+		/// <param name="callback">callback handle to notify packet result.</param>
+		/// <returns></returns>
 		public int Send(byte[] buffer, out ushort seqNumber, SendEventCallback callback)
 		{
 			seqNumber = _nextSeqNumber;
@@ -157,6 +230,10 @@ namespace RUDP
 			return buffer.Length;
 		}
 
+		/// <summary>
+		/// Updates communication send step.
+		/// </summary>
+		/// <returns>Next packet to send.</returns>
 		internal (Packet packet, RudpEvent rudpEvent) SendUpdate()
 		{
 			Packet packet = null;
@@ -218,6 +295,10 @@ namespace RUDP
 			return (packet, rudpEvent);
 		}
 
+		/// <summary>
+		/// Creates the bitfield acknowledge representation of the last 32 received packets.
+		/// </summary>
+		/// <returns>Bitfield representing the last 32 received packets.</returns>
 		private Bitfield GetReceivedBitfield()
 		{
 			Bitfield bitfield = new Bitfield(4);
@@ -229,6 +310,10 @@ namespace RUDP
 			return bitfield;
 		}
 
+		/// <summary>
+		/// Updates communication receive step.
+		/// </summary>
+		/// <param name="packet">Received packet from remote host.</param>
 		internal void ReceiveUpdate(Packet packet)
 		{
 			if (packet.Validate(AppId, _lastRemoteSeqNumber))
@@ -299,6 +384,9 @@ namespace RUDP
 		}
 
 
+		/// <summary>
+		/// Implements communication logic in client mode. 
+		/// </summary>
 		private void ClientThread()
 		{
 			_socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
