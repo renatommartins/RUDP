@@ -267,6 +267,9 @@ namespace RUDP
 
 				Thread.Yield();
 			}
+			foreach (KeyValuePair<IPEndPoint, RudpClient> pair in _connectedClients)
+				_socket.SendTo(pair.Value.GetDisconnectPacket().ToBytes(), pair.Key);
+			_socket.Close();
 		}
 	}
 }

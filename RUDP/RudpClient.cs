@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -298,6 +298,18 @@ namespace RUDP
 					}
 
 			return (packet, rudpEvent);
+		}
+
+		internal Packet GetDisconnectPacket()
+		{
+			return new Packet()
+			{
+				AppId = AppId,
+				SequenceNumber = _nextSeqNumber,
+				AckSequenceNumber = _lastRemoteSeqNumber,
+				AckBitfield = GetReceivedBitfield(),
+				Type = PacketType.DisconnectionNotify
+			};
 		}
 
 		/// <summary>
