@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -113,14 +113,8 @@ namespace RUDP
 				AckSequenceNumber = 0,
 				AckBitfield = new Bitfield(4),
 				Type = PacketType.ConnectionAccept,
+				Data = new byte[] { updateRate, version }
 			};
-
-			using(MemoryStream memoryStream = new MemoryStream())
-			{
-				memoryStream.WriteByte(updateRate);
-				memoryStream.WriteByte(version);
-				acceptPacket.Data = memoryStream.ToArray();
-			}
 
 			RudpClient client = new RudpClient(this, endPoint, 1);
 			_connectedClients.Add(endPoint, client);
