@@ -2,15 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Linq;
+using System.Diagnostics;
+using System.IO;
 
 using RUDP.Interfaces;
 using RUDP.Enumerations;
-using System.Diagnostics;
-using System.Net.Http.Headers;
-using System.IO;
+using RUDP.Utils;
 
 namespace RUDP
 {

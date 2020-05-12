@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace RUDP
+namespace RUDP.Utils
 {
 	/// <summary>
 	/// Calculates CRC following CRC-32 Standard

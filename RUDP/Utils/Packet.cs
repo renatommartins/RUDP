@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 using RUDP.Enumerations;
-using RUDP.Interfaces;
 
-namespace RUDP
+namespace RUDP.Utils
 {
 	public class Packet
 	{
@@ -152,7 +149,7 @@ namespace RUDP
 
 		public byte[] ToBytes()
 		{
-			Crc32 = RUDP.Crc32.ComputeChecksum(_buffer, 0, Crc32Offset);
+			Crc32 = RUDP.Utils.Crc32.ComputeChecksum(_buffer, 0, Crc32Offset);
 
 			byte[] buffer = new byte[_buffer.Length];
 			Array.Copy(_buffer, 0, buffer, 0, _buffer.Length);
@@ -202,7 +199,7 @@ namespace RUDP
 					break;
 			}
 
-			uint crcCheck = RUDP.Crc32.ComputeChecksum(_buffer, 0, _buffer.Length - 4);
+			uint crcCheck = RUDP.Utils.Crc32.ComputeChecksum(_buffer, 0, _buffer.Length - 4);
 			if (crcCheck != Crc32)
 				return false;
 

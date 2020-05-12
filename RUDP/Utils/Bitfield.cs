@@ -4,7 +4,7 @@ using System.Text;
 
 using RUDP.Interfaces;
 
-namespace RUDP
+namespace RUDP.Utils
 {
 	public class Bitfield
 	{
