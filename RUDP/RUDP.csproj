@@ -9,6 +9,7 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/renatommartins/RUDP</PackageProjectUrl>
     <Description>Virtual connection protocol based on UDP.</Description>
+    <PackageReleaseNotes>Added RTT measurement.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
