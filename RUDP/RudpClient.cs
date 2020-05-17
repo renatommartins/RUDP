@@ -56,6 +56,10 @@ namespace RUDP
 		/// Gets the remote endpoint.
 		/// </summary>
 		public IPEndPoint RemoteEndpoint { get; private set; }
+		/// <summary>
+		/// Average Round Trip Time over the last 32 packets
+		/// </summary>
+		public int RTT { get; private set; }
 
 		/// <summary>
 		/// Contains the actual bound socket in server mode.
@@ -101,6 +105,19 @@ namespace RUDP
 		private Dictionary<ushort, SendEventCallback> _pendingAckPackets = new Dictionary<ushort, SendEventCallback>();
 
 		/// <summary>
+		/// Stopwatch used as timestamp for each packet.
+		/// </summary>
+		private Stopwatch _rttStopwatch = new Stopwatch();
+		/// <summary>
+		/// Timestamp for the pending ackowledge packets.
+		/// </summary>
+		private Dictionary<ushort, long> _pendingPacketsTime = new Dictionary<ushort, long>();
+		/// <summary>
+		/// RTT of the last 33 packets.
+		/// </summary>
+		private Dictionary<ushort, int> _rttList = new Dictionary<ushort, int>();
+
+		/// <summary>
 		/// Data received from the remote host.
 		/// </summary>
 		private Queue<byte[]> _receiveDataQueue = new Queue<byte[]>();
@@ -139,6 +156,7 @@ namespace RUDP
 			AppId = Listener.AppId;
 			RemoteEndpoint = endPoint;
 			_nextSeqNumber = seqNumInit;
+			_rttStopwatch.Start();
 
 			_state = State.Connected;
 		}
@@ -296,6 +314,8 @@ namespace RUDP
 						};
 					}
 
+			// Add packet to timestamp list.
+			_pendingPacketsTime.Add(packet.SequenceNumber, _rttStopwatch.ElapsedMilliseconds);
 			return (packet, rudpEvent);
 		}
 
@@ -342,11 +362,15 @@ namespace RUDP
 				// Updates sent packets acknowledgements.
 				lock(_pendingAckPackets)
 				{
-					// Clears the pending acknowledge packets.
+					// Clears the pending acknowledge packets and measures RTT.
 					// Starting by the sequence number acknowledge.
 					if (_pendingAckPackets.ContainsKey(packet.AckSequenceNumber))
 					{
 						_pendingAckPackets[packet.AckSequenceNumber]?.Invoke(packet.AckSequenceNumber, RudpEvent.Successful);
+						// RTT measurement.
+						_rttList.Add(packet.AckSequenceNumber, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[packet.AckSequenceNumber]));
+
+						_pendingPacketsTime.Remove(packet.AckSequenceNumber);
 						_pendingAckPackets.Remove(packet.AckSequenceNumber);
 					}
 					// Then the 32 previous using the bitfield.
@@ -355,6 +379,10 @@ namespace RUDP
 						if (packet.AckBitfield[j] == true && _pendingAckPackets.ContainsKey(i))
 						{
 							_pendingAckPackets[i]?.Invoke(i, RudpEvent.Successful);
+							// RTT measurement.
+							_rttList.Add(i, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[i]));
+
+							_pendingPacketsTime.Remove(i);
 							_pendingAckPackets.Remove(i);
 						}
 					}
@@ -362,10 +390,24 @@ namespace RUDP
 					foreach (var pair in _pendingAckPackets.Where(seqNum => !Packet.SequenceNumberGreaterThan(seqNum.Key, (ushort)(packet.AckSequenceNumber - 33))).ToList())
 					{
 						_pendingAckPackets[pair.Key]?.Invoke(pair.Key, RudpEvent.Dropped);
+
+						_pendingPacketsTime.Remove(pair.Key);
 						_pendingAckPackets.Remove(pair.Key);
 					}
 					_lastAckSeqNum = packet.AckSequenceNumber;
 				}
+
+				// Clears RTT measurements more than 33 packets old.
+				foreach (var pair in _rttList.Where(seqNum => !Packet.SequenceNumberGreaterThan(seqNum.Key, (ushort)(packet.AckSequenceNumber - 33))).ToList())
+					_rttList.Remove(pair.Key);
+
+				// Calculates average RTT over the last 33 packets.
+				int rtt = 0;
+				foreach (KeyValuePair<ushort, int> pair in _rttList)
+					rtt += pair.Value;
+				if(_rttList.Count > 0)
+					rtt /= _rttList.Count;
+				RTT = rtt;
 
 				switch(_state)
 				{
@@ -431,6 +473,8 @@ namespace RUDP
 			// Starts connection request timeout countdown
 			_timeoutStopwatch = new Stopwatch();
 			_timeoutStopwatch.Start();
+
+			_rttStopwatch.Start();
 
 			byte[] receiveBuffer = new byte[4096];
 
