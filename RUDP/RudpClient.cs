@@ -61,6 +61,8 @@ namespace RUDP
 		/// </summary>
 		public int RTT { get; private set; }
 
+		public bool IsConnecting { get; private set; }
+
 		/// <summary>
 		/// Contains the actual bound socket in server mode.
 		/// </summary>
@@ -198,6 +200,7 @@ namespace RUDP
 			RemoteEndpoint = remoteEP;
 			_lastRemoteSeqNumber = ushort.MaxValue;
 			_state = State.Connecting;
+			IsConnecting = true;
 
 			_clientThread = new Thread(new ThreadStart(ClientThread));
 			_clientThread.Start();
@@ -420,6 +423,7 @@ namespace RUDP
 								_sendStopwatch.Start();
 								_timeoutStopwatch.Stop();
 								_state = State.Connected;
+								IsConnecting = false;
 								break;
 							case PacketType.ConnectionRefuse:
 								_isActive = false;
@@ -485,6 +489,7 @@ namespace RUDP
 				{
 					_isActive = false;
 					_state = State.Disconnected;
+					IsConnecting = false;
 				}
 
 				// Executes receive update
