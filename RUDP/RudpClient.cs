@@ -516,6 +516,7 @@ namespace RUDP
 			// Closes the connection and releases the socket.
 			_sendStopwatch?.Stop();
 			_timeoutStopwatch?.Stop();
+			_state = State.Disconnected;
 			Close();
 		}
 	}
