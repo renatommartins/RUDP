@@ -13,7 +13,7 @@ using RUDP.Utils;
 
 namespace RUDP
 {
-	public delegate void SendEventCallback(ushort seqNumber, RudpEvent sendEvent);
+	public delegate void SendEventCallback(RudpClient client, ushort seqNumber, RudpEvent sendEvent);
 
 	/// <summary>
 	/// Reliable User Datagram Protocol client implementation.
@@ -369,7 +369,7 @@ namespace RUDP
 					// Starting by the sequence number acknowledge.
 					if (_pendingAckPackets.ContainsKey(packet.AckSequenceNumber))
 					{
-						_pendingAckPackets[packet.AckSequenceNumber]?.Invoke(packet.AckSequenceNumber, RudpEvent.Successful);
+						_pendingAckPackets[packet.AckSequenceNumber]?.Invoke(this, packet.AckSequenceNumber, RudpEvent.Successful);
 						// RTT measurement.
 						_rttList.Add(packet.AckSequenceNumber, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[packet.AckSequenceNumber]));
 
@@ -381,7 +381,7 @@ namespace RUDP
 					{
 						if (packet.AckBitfield[j] == true && _pendingAckPackets.ContainsKey(i))
 						{
-							_pendingAckPackets[i]?.Invoke(i, RudpEvent.Successful);
+							_pendingAckPackets[i]?.Invoke(this, i, RudpEvent.Successful);
 							// RTT measurement.
 							_rttList.Add(i, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[i]));
 
@@ -392,7 +392,7 @@ namespace RUDP
 					// Sequence numbers behinds by more than 32 are considered dropped.
 					foreach (var pair in _pendingAckPackets.Where(seqNum => !Packet.SequenceNumberGreaterThan(seqNum.Key, (ushort)(packet.AckSequenceNumber - 33))).ToList())
 					{
-						_pendingAckPackets[pair.Key]?.Invoke(pair.Key, RudpEvent.Dropped);
+						_pendingAckPackets[pair.Key]?.Invoke(this, pair.Key, RudpEvent.Dropped);
 
 						_pendingPacketsTime.Remove(pair.Key);
 						_pendingAckPackets.Remove(pair.Key);
