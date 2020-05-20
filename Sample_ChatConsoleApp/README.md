@@ -3,6 +3,7 @@
 Simple chat using the RUDP protocol for network communication.
 
 There are two modes of use:
+
 **Client Mode**
 
 To start this mode use the following parameters:
