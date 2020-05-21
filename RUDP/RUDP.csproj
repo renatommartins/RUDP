@@ -4,12 +4,14 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>rmm.RUDP</PackageId>
-    <Version>0.10.0</Version>
+    <Version>0.11.0</Version>
     <Authors>Renato Matosinho Martins</Authors>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/renatommartins/RUDP</PackageProjectUrl>
     <Description>Virtual connection protocol based on UDP.</Description>
-    <PackageReleaseNotes>Added RTT measurement.</PackageReleaseNotes>
+    <PackageReleaseNotes>feat: Add property to check if client is in handshake phase;
+refactor: Change packet acknowledge check from callback to polling;
+fix: Properly set client state to disconnected.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
