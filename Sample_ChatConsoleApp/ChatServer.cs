@@ -78,6 +78,32 @@ namespace Sample_ChatConsoleApp
 						_pendingAckMessages.Remove(client);
 				}
 
+				// Checks the acknowledgement state of sent packets for each client.
+				foreach (RudpClient client in _clients)
+				{
+					var resultList = client.GetPacketResults();
+					foreach(var result in resultList)
+						lock(_pendingAckMessages)
+							if(_pendingAckMessages[client].ContainsKey(result.seqNum))
+								// Clears the message if it was acknowledged by the client.
+								if(result.rudpEvent == RudpEvent.Successful)
+								{
+									Console.WriteLine($"MESSAGE DELIVERED [{client.RemoteEndpoint} - {result.seqNum}: \"{_pendingAckMessages[client][result.seqNum]}\"]");
+									_pendingAckMessages[client].Remove(result.seqNum);
+								}
+								// If message gets dropped, it is resent until acknowledged by the client.
+								else if(result.rudpEvent == RudpEvent.Dropped)
+								{
+									Console.WriteLine($"RESENDING DROPPED MESSAGE[{client.RemoteEndpoint} - {result.seqNum} : \"{_pendingAckMessages[client][result.seqNum]}\"]");
+									ushort newSeqNum = client.Send(Encoding.UTF8.GetBytes(_pendingAckMessages[client][result.seqNum]));
+
+									// Replaces the sequence number for the new one to keep tracking the message retry.
+									_pendingAckMessages[client].Add(newSeqNum, _pendingAckMessages[client][result.seqNum]);
+									_pendingAckMessages[client].Remove(result.seqNum);
+								}
+					client.ClearPacketResults();
+				}
+
 				// Checks each connected client for messages and adds to the broadcast list if there is.
 				foreach (RudpClient client in _clients)
 					while (client.Available > 0)
@@ -88,7 +114,7 @@ namespace Sample_ChatConsoleApp
 				{
 					foreach (RudpClient client in message.targets)
 					{
-						client.Send(Encoding.UTF8.GetBytes(message.message), out ushort seqNum, SendCallback);
+						ushort seqNum = client.Send(Encoding.UTF8.GetBytes(message.message));
 						// Adds the message to the client's pending acknowledgement list.
 						lock (_pendingAckMessages)
 							_pendingAckMessages[client].Add(seqNum, message.message);
@@ -97,30 +123,6 @@ namespace Sample_ChatConsoleApp
 
 				_broadcastMessageList.Clear();
 			}
-		}
-
-		/// <summary>
-		/// Callback to report status of sent messages.
-		/// </summary>
-		private void SendCallback(RudpClient client, ushort seqNum, RudpEvent rudpEvent)
-		{
-			lock (_pendingAckMessages)
-				// Clears the message if is was acknowledged by the client.
-				if (rudpEvent == RudpEvent.Successful)
-				{
-					Console.WriteLine($"MESSAGE DELIVERED [{client.RemoteEndpoint} - {seqNum}: \"{_pendingAckMessages[client][seqNum]}\"]");
-					_pendingAckMessages[client].Remove(seqNum);
-				}
-				// If message is dropped, it is resent until it is acknowledged by the client.
-				else if (rudpEvent == RudpEvent.Dropped)
-				{
-					Console.WriteLine($"RESENDING DROPPED MESSAGE[{client.RemoteEndpoint} - {seqNum} : \"{_pendingAckMessages[client][seqNum]}\"]");
-					client.Send(Encoding.UTF8.GetBytes(_pendingAckMessages[client][seqNum]), out ushort newSeqNum, SendCallback);
-
-					// Replaces the sequence number for the new one to keep tracking the message retry.
-					_pendingAckMessages[client].Add(newSeqNum, _pendingAckMessages[client][seqNum]);
-					_pendingAckMessages[client].Remove(seqNum);
-				}
 		}
 	}
 }

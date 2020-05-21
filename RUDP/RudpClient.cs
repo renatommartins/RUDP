@@ -105,6 +105,10 @@ namespace RUDP
 		/// Table containing callback handle for sent packet events.
 		/// </summary>
 		private Dictionary<ushort, SendEventCallback> _pendingAckPackets = new Dictionary<ushort, SendEventCallback>();
+		/// <summary>
+		/// List of packet delivery results.
+		/// </summary>
+		private Dictionary<ushort, RudpEvent> _packetResults = new Dictionary<ushort, RudpEvent>();
 
 		/// <summary>
 		/// Stopwatch used as timestamp for each packet.
@@ -221,12 +225,23 @@ namespace RUDP
 		/// </summary>
 		/// <param name="buffer">data to send.</param>
 		/// <returns>size of sent buffer.</returns>
-		public int Send(byte[] buffer)
+		public ushort Send(byte[] buffer)
 		{
-			ushort seqNum;
-			return Send(buffer, out seqNum, null);
+			ushort seqNumber = _nextSeqNumber;
+			lock (_sendDataQueue)
+				lock (_pendingAckPackets)
+				{
+					_sendDataQueue.Enqueue(buffer);
+					if (!_pendingAckPackets.ContainsKey(seqNumber))
+						_pendingAckPackets.Add(_nextSeqNumber, null);
+					else
+						_pendingAckPackets[seqNumber] = null;
+				}
+
+			return seqNumber;
 		}
 
+		[Obsolete]
 		/// <summary>
 		/// Queues data to be sent next packet.
 		/// </summary>
@@ -248,6 +263,38 @@ namespace RUDP
 				}
 
 			return buffer.Length;
+		}
+
+		/// <summary>
+		/// Gets the packet delivery results ordered by sequence number.
+		/// </summary>
+		/// <returns></returns>
+		public List<(ushort seqNum, RudpEvent rudpEvent)> GetPacketResults()
+		{
+			List<(ushort seqNum, RudpEvent rudpEvent)> resultList = new List<(ushort, RudpEvent)>();
+			lock(_packetResults)
+				foreach (var result in _packetResults)
+					resultList.Add((result.Key, result.Value));
+			resultList.Sort(delegate((ushort seqNum, RudpEvent rudpEvent) result1, (ushort seqNum, RudpEvent rudpEvent) result2)
+			{
+				if (result1.seqNum == result2.seqNum)
+					return 0;
+				else if (Packet.SequenceNumberGreaterThan(result1.seqNum, result2.seqNum))
+					return 1;
+				else
+					return -1;
+			});
+
+			return resultList;
+		}
+
+		/// <summary>
+		/// Clear the packet delivery result list.
+		/// </summary>
+		public void ClearPacketResults()
+		{
+			lock(_packetResults)
+				_packetResults.Clear();
 		}
 
 		/// <summary>
@@ -319,6 +366,10 @@ namespace RUDP
 
 			// Add packet to timestamp list.
 			_pendingPacketsTime.Add(packet.SequenceNumber, _rttStopwatch.ElapsedMilliseconds);
+			// Add the packet to result list.
+			lock(_packetResults)
+				_packetResults.Add(packet.SequenceNumber, RudpEvent.Pending);
+
 			return (packet, rudpEvent);
 		}
 
@@ -369,7 +420,15 @@ namespace RUDP
 					// Starting by the sequence number acknowledge.
 					if (_pendingAckPackets.ContainsKey(packet.AckSequenceNumber))
 					{
+						// Calls the registered callback for this packet's result.
 						_pendingAckPackets[packet.AckSequenceNumber]?.Invoke(this, packet.AckSequenceNumber, RudpEvent.Successful);
+						// Add the packet result to result list.
+						lock (_packetResults)
+							if (!_packetResults.ContainsKey(packet.AckSequenceNumber))
+								_packetResults.Add(packet.AckSequenceNumber, RudpEvent.Successful);
+							else
+								_packetResults[packet.AckSequenceNumber] = RudpEvent.Successful;
+
 						// RTT measurement.
 						_rttList.Add(packet.AckSequenceNumber, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[packet.AckSequenceNumber]));
 
@@ -381,7 +440,15 @@ namespace RUDP
 					{
 						if (packet.AckBitfield[j] == true && _pendingAckPackets.ContainsKey(i))
 						{
+							// Calls the registered callback for this packet's result.
 							_pendingAckPackets[i]?.Invoke(this, i, RudpEvent.Successful);
+							// Add the packet result to result list.
+							lock (_packetResults)
+								if (!_packetResults.ContainsKey(i))
+									_packetResults.Add(i, RudpEvent.Successful);
+								else
+									_packetResults[i] = RudpEvent.Successful;
+
 							// RTT measurement.
 							_rttList.Add(i, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[i]));
 
@@ -392,7 +459,14 @@ namespace RUDP
 					// Sequence numbers behinds by more than 32 are considered dropped.
 					foreach (var pair in _pendingAckPackets.Where(seqNum => !Packet.SequenceNumberGreaterThan(seqNum.Key, (ushort)(packet.AckSequenceNumber - 33))).ToList())
 					{
+						// Calls the registered callback for this packet's result.
 						_pendingAckPackets[pair.Key]?.Invoke(this, pair.Key, RudpEvent.Dropped);
+						// Add the packet result to result list.
+						lock (_packetResults)
+							if (!_packetResults.ContainsKey(pair.Key))
+								_packetResults.Add(pair.Key, RudpEvent.Dropped);
+							else
+								_packetResults[pair.Key] = RudpEvent.Dropped;
 
 						_pendingPacketsTime.Remove(pair.Key);
 						_pendingAckPackets.Remove(pair.Key);

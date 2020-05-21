@@ -9,6 +9,7 @@ namespace RUDP.Enumerations
 		Successful,
 		Dropped,
 		Delayed,
-		Disconnected
+		Disconnected,
+		Pending
 	}
 }
