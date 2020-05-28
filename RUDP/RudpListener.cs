@@ -264,7 +264,7 @@ namespace RUDP
 						foreach (var pair in _connectedClients)
 						{
 							// Gets the packet for this window of each client.
-							(Packet packet, RudpEvent rudpEvent) = pair.Value.SendUpdate();
+							Packet packet = pair.Value.SendUpdate();
 
 							// Clears disconnected clients.
 							if (!pair.Value.Connected)

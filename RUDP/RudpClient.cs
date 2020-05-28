@@ -301,10 +301,9 @@ namespace RUDP
 		/// Updates communication send step.
 		/// </summary>
 		/// <returns>Next packet to send.</returns>
-		internal (Packet packet, RudpEvent rudpEvent) SendUpdate()
+		internal Packet SendUpdate()
 		{
 			Packet packet = null;
-			RudpEvent rudpEvent = RudpEvent.Successful;
 
 			//Checks if none of the last 32 packets sent were acknowledged.
 			//If true it assumes connection dropped.
@@ -319,7 +318,6 @@ namespace RUDP
 					Type = PacketType.DisconnectionNotify,
 				};
 
-				rudpEvent = RudpEvent.Disconnected;
 				_isActive = false;
 				_state = State.Disconnected;
 			}
@@ -370,7 +368,7 @@ namespace RUDP
 			lock(_packetResults)
 				_packetResults.Add(packet.SequenceNumber, RudpEvent.Pending);
 
-			return (packet, rudpEvent);
+			return packet;
 		}
 
 		internal Packet GetDisconnectPacket()
@@ -582,11 +580,8 @@ namespace RUDP
 						if(_sendStopwatch.ElapsedMilliseconds >= 1000/SendRate)
 						{
 							_sendStopwatch.Restart();
-							(Packet packet, RudpEvent rudpEvent) = SendUpdate();
+							Packet packet = SendUpdate();
 							_socket.SendTo(packet.ToBytes(), RemoteEndpoint);
-
-							if (rudpEvent == RudpEvent.Disconnected)
-								break;
 						}
 
 				Thread.Yield();
