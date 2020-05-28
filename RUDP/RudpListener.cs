@@ -89,6 +89,18 @@ namespace RUDP
 		}
 
 		/// <summary>
+		/// Creates a new RudpListener instance.
+		/// </summary>
+		/// <param name="appId"></param>
+		/// <param name="endPoint">endpoint to bind to.</param>
+		/// <param name="sendRate">packet send rate per second.</param>
+		/// <param name="socket">socket instance to replace the standard.</param>
+		public RudpListener(ushort appId, IPEndPoint endPoint, int sendRate, IRudpSocket socket) : this(appId, endPoint, sendRate)
+		{
+			_socket = socket;
+		}
+
+		/// <summary>
 		/// Accepts the first connection request from the pending connection requests.
 		/// </summary>
 		/// <returns>New instance of RudpClient representing the remote host.</returns>
@@ -191,8 +203,9 @@ namespace RUDP
 		/// </summary>
 		private void ListenerThread()
 		{
-			// Instantiates and binds the actual socket
-			_socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			// Instantiates RudpInternalSocket if null and binds the actual socket
+			if (_socket == null)
+				_socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			_socket.Bind(LocalEndpoint);
 
 			_sendStopwatch = new Stopwatch();

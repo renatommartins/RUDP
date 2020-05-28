@@ -151,6 +151,16 @@ namespace RUDP
 		}
 
 		/// <summary>
+		/// Creates a new RudpClient instance in client mode.
+		/// </summary>
+		/// <param name="appId"></param>
+		/// <param name="socket">socket instance to replace the standard.</param>
+		public RudpClient(ushort appId, IRudpSocket socket) : this(appId)
+		{
+			_socket = socket;
+		}
+
+		/// <summary>
 		/// Creates a new RudpClient instance in server mode.
 		/// </summary>
 		/// <param name="listener">Listener handling the communicaiton thread.</param>
@@ -529,8 +539,9 @@ namespace RUDP
 		/// </summary>
 		private void ClientThread()
 		{
-			// Instantiates and binds the actual socket
-			_socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			// Instantiates RudpInternalSocket if null and binds the actual socket
+			if (_socket == null)
+				_socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			_socket.Bind(new IPEndPoint(IPAddress.Any, RemoteEndpoint.Port));
 
 			// Sends connection request for client mode.
