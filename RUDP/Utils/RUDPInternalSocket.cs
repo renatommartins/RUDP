@@ -7,7 +7,7 @@ using RUDP.Interfaces;
 
 namespace RUDP.Utils
 {
-	public class RudpInternalSocket : Socket, IRudpSocket
+	internal class RudpInternalSocket : Socket, IRudpSocket
 	{
 		public RudpInternalSocket(SocketInformation socketInformation) : base(socketInformation)
 		{
