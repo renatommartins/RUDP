@@ -4,12 +4,11 @@ using System.Text;
 
 namespace RUDP.Enumerations
 {
-	public enum RudpEvent
+	public enum PacketResult
 	{
 		Successful,
 		Dropped,
-		Delayed,
-		Disconnected,
-		Pending
+		Pending,
+		Delayed
 	}
 }

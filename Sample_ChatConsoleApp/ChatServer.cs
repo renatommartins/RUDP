@@ -86,13 +86,13 @@ namespace Sample_ChatConsoleApp
 						lock(_pendingAckMessages)
 							if(_pendingAckMessages[client].ContainsKey(result.seqNum))
 								// Clears the message if it was acknowledged by the client.
-								if(result.rudpEvent == RudpEvent.Successful)
+								if(result.rudpEvent == PacketResult.Successful)
 								{
 									Console.WriteLine($"MESSAGE DELIVERED [{client.RemoteEndpoint} - {result.seqNum}: \"{_pendingAckMessages[client][result.seqNum]}\"]");
 									_pendingAckMessages[client].Remove(result.seqNum);
 								}
 								// If message gets dropped, it is resent until acknowledged by the client.
-								else if(result.rudpEvent == RudpEvent.Dropped)
+								else if(result.rudpEvent == PacketResult.Dropped)
 								{
 									Console.WriteLine($"RESENDING DROPPED MESSAGE[{client.RemoteEndpoint} - {result.seqNum} : \"{_pendingAckMessages[client][result.seqNum]}\"]");
 									ushort newSeqNum = client.Send(Encoding.UTF8.GetBytes(_pendingAckMessages[client][result.seqNum]));

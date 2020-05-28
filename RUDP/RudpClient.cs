@@ -13,7 +13,7 @@ using RUDP.Utils;
 
 namespace RUDP
 {
-	public delegate void SendEventCallback(RudpClient client, ushort seqNumber, RudpEvent sendEvent);
+	public delegate void SendEventCallback(RudpClient client, ushort seqNumber, PacketResult sendEvent);
 
 	/// <summary>
 	/// Reliable User Datagram Protocol client implementation.
@@ -108,7 +108,7 @@ namespace RUDP
 		/// <summary>
 		/// List of packet delivery results.
 		/// </summary>
-		private Dictionary<ushort, RudpEvent> _packetResults = new Dictionary<ushort, RudpEvent>();
+		private Dictionary<ushort, PacketResult> _packetResults = new Dictionary<ushort, PacketResult>();
 
 		/// <summary>
 		/// Stopwatch used as timestamp for each packet.
@@ -269,13 +269,13 @@ namespace RUDP
 		/// Gets the packet delivery results ordered by sequence number.
 		/// </summary>
 		/// <returns></returns>
-		public List<(ushort seqNum, RudpEvent rudpEvent)> GetPacketResults()
+		public List<(ushort seqNum, PacketResult rudpEvent)> GetPacketResults()
 		{
-			List<(ushort seqNum, RudpEvent rudpEvent)> resultList = new List<(ushort, RudpEvent)>();
+			List<(ushort seqNum, PacketResult rudpEvent)> resultList = new List<(ushort, PacketResult)>();
 			lock(_packetResults)
 				foreach (var result in _packetResults)
 					resultList.Add((result.Key, result.Value));
-			resultList.Sort(delegate((ushort seqNum, RudpEvent rudpEvent) result1, (ushort seqNum, RudpEvent rudpEvent) result2)
+			resultList.Sort(delegate((ushort seqNum, PacketResult rudpEvent) result1, (ushort seqNum, PacketResult rudpEvent) result2)
 			{
 				if (result1.seqNum == result2.seqNum)
 					return 0;
@@ -366,7 +366,7 @@ namespace RUDP
 			_pendingPacketsTime.Add(packet.SequenceNumber, _rttStopwatch.ElapsedMilliseconds);
 			// Add the packet to result list.
 			lock(_packetResults)
-				_packetResults.Add(packet.SequenceNumber, RudpEvent.Pending);
+				_packetResults.Add(packet.SequenceNumber, PacketResult.Pending);
 
 			return packet;
 		}
@@ -419,13 +419,13 @@ namespace RUDP
 					if (_pendingAckPackets.ContainsKey(packet.AckSequenceNumber))
 					{
 						// Calls the registered callback for this packet's result.
-						_pendingAckPackets[packet.AckSequenceNumber]?.Invoke(this, packet.AckSequenceNumber, RudpEvent.Successful);
+						_pendingAckPackets[packet.AckSequenceNumber]?.Invoke(this, packet.AckSequenceNumber, PacketResult.Successful);
 						// Add the packet result to result list.
 						lock (_packetResults)
 							if (!_packetResults.ContainsKey(packet.AckSequenceNumber))
-								_packetResults.Add(packet.AckSequenceNumber, RudpEvent.Successful);
+								_packetResults.Add(packet.AckSequenceNumber, PacketResult.Successful);
 							else
-								_packetResults[packet.AckSequenceNumber] = RudpEvent.Successful;
+								_packetResults[packet.AckSequenceNumber] = PacketResult.Successful;
 
 						// RTT measurement.
 						_rttList.Add(packet.AckSequenceNumber, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[packet.AckSequenceNumber]));
@@ -439,13 +439,13 @@ namespace RUDP
 						if (packet.AckBitfield[j] == true && _pendingAckPackets.ContainsKey(i))
 						{
 							// Calls the registered callback for this packet's result.
-							_pendingAckPackets[i]?.Invoke(this, i, RudpEvent.Successful);
+							_pendingAckPackets[i]?.Invoke(this, i, PacketResult.Successful);
 							// Add the packet result to result list.
 							lock (_packetResults)
 								if (!_packetResults.ContainsKey(i))
-									_packetResults.Add(i, RudpEvent.Successful);
+									_packetResults.Add(i, PacketResult.Successful);
 								else
-									_packetResults[i] = RudpEvent.Successful;
+									_packetResults[i] = PacketResult.Successful;
 
 							// RTT measurement.
 							_rttList.Add(i, (int)(_rttStopwatch.ElapsedMilliseconds - _pendingPacketsTime[i]));
@@ -458,13 +458,13 @@ namespace RUDP
 					foreach (var pair in _pendingAckPackets.Where(seqNum => !Packet.SequenceNumberGreaterThan(seqNum.Key, (ushort)(packet.AckSequenceNumber - 33))).ToList())
 					{
 						// Calls the registered callback for this packet's result.
-						_pendingAckPackets[pair.Key]?.Invoke(this, pair.Key, RudpEvent.Dropped);
+						_pendingAckPackets[pair.Key]?.Invoke(this, pair.Key, PacketResult.Dropped);
 						// Add the packet result to result list.
 						lock (_packetResults)
 							if (!_packetResults.ContainsKey(pair.Key))
-								_packetResults.Add(pair.Key, RudpEvent.Dropped);
+								_packetResults.Add(pair.Key, PacketResult.Dropped);
 							else
-								_packetResults[pair.Key] = RudpEvent.Dropped;
+								_packetResults[pair.Key] = PacketResult.Dropped;
 
 						_pendingPacketsTime.Remove(pair.Key);
 						_pendingAckPackets.Remove(pair.Key);

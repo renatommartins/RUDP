@@ -97,10 +97,10 @@ namespace Sample_ChatConsoleApp
 				foreach(var result in resultList)
 					if(_pendingAckMessages.ContainsKey(result.seqNum))
 						// Just clears the message sent if it was acknowledged by the server.
-						if (result.rudpEvent == RudpEvent.Successful)
+						if (result.rudpEvent == PacketResult.Successful)
 							_pendingAckMessages.Remove(result.seqNum);
 						// If message is dropped, it is resent until it is acknowledged by the server.
-						else if (result.rudpEvent == RudpEvent.Dropped)
+						else if (result.rudpEvent == PacketResult.Dropped)
 						{
 							// Notifies the user that it is trying to resend a dropped message.
 							_messageLog.Add(($"System - RESENDING DROPPED MESSAGE [{result.seqNum}]", DateTime.Now, 0, true));
