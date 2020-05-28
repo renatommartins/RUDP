@@ -110,15 +110,15 @@ if (!client.IsConnecting && client.Connected)
 	
 	// Check the acknowledge state of sent data, use the recorded sequence number returned from the 'Send' call
 	// to relate the sequence number to the data you sent.
-	List<(ushort, RudpEvent)> AcknowledgeList = client.GetPacketResults();
-	foreach((ushort seqNum, RudpEvent rudpEvent) result in AcknowledgeList)
-		if(result.rudpEvent == RudpEvent.Successful)
+	List<(ushort, PacketResult)> AcknowledgeList = client.GetPacketResults();
+	foreach((ushort seqNum, PacketResult packet) result in AcknowledgeList)
+		if(result.packet == PacketResult.Successful)
 			// Packet was successfully delivered.
 			Console.WriteLine($"Packet {result.seqNum} was successfully delivered");
-		else if(result.rudpEvent == RudpEvent.Dropped)
+		else if(result.packet == PacketResult.Dropped)
 			// Packet was dropped.
 			Console.WriteLine($"Packet {result.seqNum} was dropped");
-		else if(result.rudpEvent == RudpEvent.Pending)
+		else if(result.packet == PacketResult.Pending)
 			// Packet has not been acknowledged yet.
 			Console.WriteLine($"Packet {result.seqNum} is pending acknowledge");
 	
