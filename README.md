@@ -28,7 +28,8 @@ It is meant for applications that need a realtime communication and the ability 
 * Doesn't provide security, in the future the client may allow replacing the medium it sends and receives data through, this would allow for a DTLS connection to be used and provide security. There won't be an attempt on providing security since it isn't simple to develop security protocols, I strongly recommend that a robust solution is used for that end, eg.: OpenSSL.
 
 ## Possible Improvements
-* Allow replacing the socket class used by the client and listener.
+* ~~Allow replacing the socket class used by the client and listener~~
+(Use constructor to provide alternate implementantion).
 * Add test cases to better validate functionality.
 * Add quality of service wrapper class that has reliability and data sequence ordering built-in.
 * Better handshaking process, adding retries for example.
