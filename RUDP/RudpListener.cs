@@ -36,7 +36,7 @@ namespace RUDP
 		/// <summary>
 		/// Contains the bound socket.
 		/// </summary>
-		private IRudpSocket _socket;
+		private ISocket _socket;
 		/// <summary>
 		/// Communication handling thread.
 		/// </summary>
@@ -95,7 +95,7 @@ namespace RUDP
 		/// <param name="endPoint">endpoint to bind to.</param>
 		/// <param name="sendRate">packet send rate per second.</param>
 		/// <param name="socket">socket instance to replace the standard.</param>
-		public RudpListener(ushort appId, IPEndPoint endPoint, int sendRate, IRudpSocket socket) : this(appId, endPoint, sendRate)
+		public RudpListener(ushort appId, IPEndPoint endPoint, int sendRate, ISocket socket = null) : this(appId, endPoint, sendRate)
 		{
 			_socket = socket;
 		}
@@ -124,7 +124,7 @@ namespace RUDP
 				AckSequenceNumber = 0,
 				AckBitfield = new Bitfield(4),
 				Type = PacketType.ConnectionAccept,
-				Data = new byte[] { updateRate, version }
+				Data = new ArraySegment<byte>(new [] { updateRate, version }),
 			};
 
 			// Create new RudpClient instance to represent remote host.
@@ -220,7 +220,7 @@ namespace RUDP
 				if (_socket.Available > 0)
 				{
 					EndPoint remoteEndpoint = new IPEndPoint(IPAddress.Any, 0);
-					int receiveCount = _socket.ReceiveFrom(receiveBuffer, 0, receiveBuffer.Length, SocketFlags.None, ref remoteEndpoint);
+					int receiveCount = _socket.Receive(receiveBuffer, 0, receiveBuffer.Length, ref remoteEndpoint);
 
 					Packet packet = new Packet(receiveBuffer, 0, receiveCount);
 					// Checks if the packet comes from an already connected remote host.
@@ -237,7 +237,7 @@ namespace RUDP
 											_pendingRequests.Enqueue((IPEndPoint)remoteEndpoint);
 									// Refuses the request if the request is invalid.
 									else
-										_socket.SendTo(
+										_socket.Send(
 											new Packet()
 											{
 												AppId = AppId,
@@ -246,7 +246,6 @@ namespace RUDP
 												AckBitfield = new Bitfield(4),
 												Type = PacketType.ConnectionRefuse
 											}.ToBytes(),
-											SocketFlags.None,
 											remoteEndpoint
 											);
 								}
@@ -271,7 +270,7 @@ namespace RUDP
 
 						// Sends all enqueued connection accept replies.
 						foreach ((IPEndPoint endpoint, Packet packet) reply in _acceptReplyList)
-							_socket.SendTo(reply.packet.ToBytes(), reply.endpoint);
+							_socket.Send(reply.packet.ToBytes(), reply.endpoint);
 
 						List<IPEndPoint> disconnectedClients = new List<IPEndPoint>();
 						foreach (var pair in _connectedClients)
@@ -283,7 +282,7 @@ namespace RUDP
 							if (!pair.Value.Connected)
 								disconnectedClients.Add(pair.Key);
 
-							_socket.SendTo(packet.ToBytes(), pair.Key);
+							_socket.Send(packet.ToBytes(), pair.Key);
 						}
 						foreach (IPEndPoint endPoint in disconnectedClients)
 							_connectedClients.Remove(endPoint);
@@ -295,7 +294,7 @@ namespace RUDP
 			}
 			// Disconnects all remote host when closing the listener.
 			foreach (KeyValuePair<IPEndPoint, RudpClient> pair in _connectedClients)
-				_socket.SendTo(pair.Value.GetDisconnectPacket().ToBytes(), pair.Key);
+				_socket.Send(pair.Value.GetDisconnectPacket().ToBytes(), pair.Key);
 			_socket.Close();
 		}
 	}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -7,23 +8,28 @@ using RUDP.Interfaces;
 
 namespace RUDP.Utils
 {
-	internal class RudpInternalSocket : Socket, IRudpSocket
+	internal class RudpInternalSocket : ISocket
 	{
-		public RudpInternalSocket(SocketInformation socketInformation) : base(socketInformation)
+		private readonly Socket _socket;
+
+		public RudpInternalSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
 		{
+			_socket = new Socket(addressFamily, socketType, protocolType);
 		}
 
-		public RudpInternalSocket(SocketType socketType, ProtocolType protocolType) : base(socketType, protocolType)
-		{
-		}
+		public int Available
+			=> _socket.Available;
 
-		public RudpInternalSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) : base(addressFamily, socketType, protocolType)
-		{
-		}
+		public void Bind(EndPoint localEp)
+			=> _socket.Bind(localEp);
 
-		ISocket ISocket.Accept()
-		{
-			return (ISocket)Accept();
-		}
+		public void Close()
+			=> _socket.Close();
+
+		public int Receive(byte[] receiveBuffer, int offset, int length, ref EndPoint endPoint)
+			=> _socket.ReceiveFrom(receiveBuffer, offset, length, SocketFlags.None, ref endPoint);
+
+		public int Send(byte[] sendBuffer, EndPoint endPoint)
+			=> _socket.SendTo(sendBuffer, endPoint);
 	}
 }
