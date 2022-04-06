@@ -352,7 +352,7 @@ namespace RUDP
 								AckSequenceNumber = _lastRemoteSeqNumber,
 								AckBitfield = GetReceivedBitfield(),
 								Type = PacketType.Data,
-								Data = stream.ToArray(),
+								Data = new ArraySegment<byte>(stream.ToArray()),
 							};
 						}
 					}
@@ -368,7 +368,7 @@ namespace RUDP
 							AckSequenceNumber = _lastRemoteSeqNumber,
 							AckBitfield = GetReceivedBitfield(),
 							Type = PacketType.KeepAlive,
-							Data = null,
+							Data = new ArraySegment<byte>(),
 						};
 					}
 
@@ -500,7 +500,8 @@ namespace RUDP
 						switch(packet.Type)
 						{
 							case PacketType.ConnectionAccept:
-								SendRate = packet.Data[0];
+								var packetData = packet.Data; 
+								SendRate = packetData.Array[packetData.Offset + 0];
 								_sendStopwatch = new Stopwatch();
 								_sendStopwatch.Start();
 								_timeoutStopwatch.Stop();
@@ -521,7 +522,7 @@ namespace RUDP
 								_state = State.Disconnected;
 								break;
 							case PacketType.Data:
-								_receiveDataQueue.Enqueue(packet.Data);
+								_receiveDataQueue.Enqueue(packet.Data.ToArray());
 								break;
 						}
 						break;

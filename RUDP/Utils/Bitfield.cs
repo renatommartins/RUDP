@@ -20,6 +20,12 @@ namespace RUDP.Utils
 			bitfield = new bool[byteSize * 8];
 		}
 
+		public int GetSize()
+		{
+			var isByteMultiple = bitfield.Length % 8 == 0;
+			return bitfield.Length / 8 + (isByteMultiple? 0 : 1);
+		}
+
 		/// <summary>
 		/// Initializes an empty instance of Bitfield.
 		/// </summary>
