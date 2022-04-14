@@ -222,7 +222,7 @@ namespace RUDP
 					EndPoint remoteEndpoint = new IPEndPoint(IPAddress.Any, 0);
 					int receiveCount = _socket.Receive(receiveBuffer, 0, receiveBuffer.Length, ref remoteEndpoint);
 
-					Packet packet = new Packet(receiveBuffer, 0, receiveCount);
+					Packet packet = Packet.FromBytes(receiveBuffer, 0, receiveCount);
 					// Checks if the packet comes from an already connected remote host.
 					if(!_connectedClients.ContainsKey((IPEndPoint)remoteEndpoint))
 					{
@@ -238,14 +238,14 @@ namespace RUDP
 									// Refuses the request if the request is invalid.
 									else
 										_socket.Send(
-											new Packet()
+											Packet.ToBytes(new Packet()
 											{
 												AppId = AppId,
 												SequenceNumber = 0,
 												AckSequenceNumber = 0,
 												AckBitfield = new Bitfield(4),
 												Type = PacketType.ConnectionRefuse
-											}.ToBytes(),
+											}),
 											remoteEndpoint
 											);
 								}
@@ -270,7 +270,7 @@ namespace RUDP
 
 						// Sends all enqueued connection accept replies.
 						foreach ((IPEndPoint endpoint, Packet packet) reply in _acceptReplyList)
-							_socket.Send(reply.packet.ToBytes(), reply.endpoint);
+							_socket.Send(Packet.ToBytes(reply.packet), reply.endpoint);
 
 						List<IPEndPoint> disconnectedClients = new List<IPEndPoint>();
 						foreach (var pair in _connectedClients)
@@ -282,7 +282,7 @@ namespace RUDP
 							if (!pair.Value.Connected)
 								disconnectedClients.Add(pair.Key);
 
-							_socket.Send(packet.ToBytes(), pair.Key);
+							_socket.Send(Packet.ToBytes(packet), pair.Key);
 						}
 						foreach (IPEndPoint endPoint in disconnectedClients)
 							_connectedClients.Remove(endPoint);
@@ -294,7 +294,7 @@ namespace RUDP
 			}
 			// Disconnects all remote host when closing the listener.
 			foreach (KeyValuePair<IPEndPoint, RudpClient> pair in _connectedClients)
-				_socket.Send(pair.Value.GetDisconnectPacket().ToBytes(), pair.Key);
+				_socket.Send(Packet.ToBytes(pair.Value.GetDisconnectPacket()), pair.Key);
 			_socket.Close();
 		}
 	}

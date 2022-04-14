@@ -14,18 +14,7 @@ namespace RUDP.Utils
 		{
 
 		}
-
-		public void SetSize(int byteSize)
-		{
-			bitfield = new bool[byteSize * 8];
-		}
-
-		public int GetSize()
-		{
-			var isByteMultiple = bitfield.Length % 8 == 0;
-			return bitfield.Length / 8 + (isByteMultiple? 0 : 1);
-		}
-
+		
 		/// <summary>
 		/// Initializes an empty instance of Bitfield.
 		/// </summary>
@@ -40,6 +29,24 @@ namespace RUDP.Utils
 			FromBytes(buffer, offset, length);
 		}
 
+		public Bitfield(ArraySegment<byte> buffer)
+		{
+			FromBytes(buffer.Array, buffer.Offset, buffer.Count);
+		}
+
+		public void SetSize(int byteSize)
+		{
+			bitfield = new bool[byteSize * 8];
+		}
+
+		public int GetSize()
+		{
+			var isByteMultiple = bitfield.Length % 8 == 0;
+			return bitfield.Length / 8 + (isByteMultiple? 0 : 1);
+		}
+
+		public int GetBitSize() => bitfield.Length;
+
 		/// <summary>
 		/// Gets of sets a bit inside the bitfield.
 		/// </summary>
@@ -47,14 +54,8 @@ namespace RUDP.Utils
 		/// <returns></returns>
 		public bool this[int index]
 		{
-			get
-			{
-				return bitfield[index];
-			}
-			set
-			{
-				bitfield[index] = value;
-			}
+			get => bitfield[index];
+			set => bitfield[index] = value;
 		}
 
 		/// <summary>

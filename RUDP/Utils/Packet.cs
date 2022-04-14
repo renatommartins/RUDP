@@ -112,7 +112,7 @@ namespace RUDP.Utils
 				{
 					var newBuffer = new byte[DataOffset + value.Count + 4];
 					if(!(_buffer is null))
-						Array.Copy(_buffer, 0, newBuffer, 0, DataOffset);
+						Array.Copy(_buffer, 0, newBuffer, 0, _buffer.Length);
 					Array.Copy(value.Array, value.Offset, newBuffer, DataOffset, value.Count);
 					_buffer = newBuffer;
 				}
@@ -148,63 +148,73 @@ namespace RUDP.Utils
 
 		public Packet(){}
 
-		public Packet(byte[] buffer)
-		{
-			FromBytes(buffer, 0, buffer.Length);
-		}
-
-		public Packet(byte[] buffer, int offset, int length)
-		{
-			FromBytes(buffer, offset, length);
-		}
-
 		private void CommitToBuffer()
 		{
-			if (_isDirty)
-			{
-				//App ID
-				_buffer[AppIdOffset + 0] = (byte)((_appId ?? 0 & 0xFF00) >> 8);
-				_buffer[AppIdOffset + 1] = (byte)((_appId ?? 0 & 0x00FF) >> 0);
-				
-				//Sequence Number
-				_buffer[SeqNumOffset + 0] = (byte)((_sequenceNumber ?? 0 & 0xFF00) >> 8);
-				_buffer[SeqNumOffset + 1] = (byte)((_sequenceNumber ?? 0 & 0x00FF) >> 0);
-				
-				//Ack Sequence Number
-				_buffer[AckSeqNumOffset + 0] = (byte)((_ackSequenceNumber ?? 0 & 0xFF00) >> 8);
-				_buffer[AckSeqNumOffset + 1] = (byte)((_ackSequenceNumber ?? 0 & 0x00FF) >> 0);
-				
-				//Ack Bitfield
-				Array.Copy(_ackBitfield.ToBytes(), 0, _buffer, AckBitfieldOffset, 4);
-				
-				//PacketType
-				_buffer[TypeOffset + 0] = (byte)(((ushort?)_packetType ?? 0 & 0xFF00) >> 8);
-				_buffer[TypeOffset + 1] = (byte)(((ushort?)_packetType ?? 0 & 0x00FF) >> 0);
-				
-				var crc32 = RUDP.Utils.Crc32.ComputeChecksum(_buffer, 0, Crc32Offset);
-				_buffer[Crc32Offset + 0] = (byte)((crc32 & 0xFF000000) >> 24);
-				_buffer[Crc32Offset + 1] = (byte)((crc32 & 0x00FF0000) >> 16);
-				_buffer[Crc32Offset + 2] = (byte)((crc32 & 0x0000FF00) >> 8);
-				_buffer[Crc32Offset + 3] = (byte)((crc32 & 0x000000FF) >> 0);
+			if (!_isDirty)
+				return;
 
-				_isDirty = false;
-			}
+			if (_buffer is null)
+				_buffer = new byte[DataOffset + 4];
+			
+			//App ID
+			_buffer[AppIdOffset + 0] = (byte)((_appId ?? 0 & 0xFF00) >> 8);
+			_buffer[AppIdOffset + 1] = (byte)((_appId ?? 0 & 0x00FF) >> 0);
+				
+			//Sequence Number
+			_buffer[SeqNumOffset + 0] = (byte)((_sequenceNumber ?? 0 & 0xFF00) >> 8);
+			_buffer[SeqNumOffset + 1] = (byte)((_sequenceNumber ?? 0 & 0x00FF) >> 0);
+				
+			//Ack Sequence Number
+			_buffer[AckSeqNumOffset + 0] = (byte)((_ackSequenceNumber ?? 0 & 0xFF00) >> 8);
+			_buffer[AckSeqNumOffset + 1] = (byte)((_ackSequenceNumber ?? 0 & 0x00FF) >> 0);
+				
+			//Ack Bitfield
+			_ackBitfield = _ackBitfield ?? new Bitfield(4);
+			Array.Copy(_ackBitfield.ToBytes(), 0, _buffer, AckBitfieldOffset, 4);
+				
+			//PacketType
+			_buffer[TypeOffset + 0] = (byte)(((ushort?)_packetType ?? 0 & 0xFF00) >> 8);
+			_buffer[TypeOffset + 1] = (byte)(((ushort?)_packetType ?? 0 & 0x00FF) >> 0);
+				
+			var crc32 = RUDP.Utils.Crc32.ComputeChecksum(_buffer, 0, Crc32Offset);
+			_buffer[Crc32Offset + 0] = (byte)((crc32 & 0xFF000000) >> 24);
+			_buffer[Crc32Offset + 1] = (byte)((crc32 & 0x00FF0000) >> 16);
+			_buffer[Crc32Offset + 2] = (byte)((crc32 & 0x0000FF00) >> 8);
+			_buffer[Crc32Offset + 3] = (byte)((crc32 & 0x000000FF) >> 0);
+
+			_isDirty = false;
 		}
 
-		public byte[] ToBytes()
+		public static byte[] ToBytes(Packet packet)
 		{
-			CommitToBuffer();
+			packet.CommitToBuffer();
 
-			byte[] buffer = new byte[_buffer.Length];
-			Array.Copy(_buffer, 0, buffer, 0, _buffer.Length);
+			byte[] buffer = new byte[packet._buffer.Length];
+			Array.Copy(packet._buffer, 0, buffer, 0, packet._buffer.Length);
 
 			return buffer;
 		}
 
-		public void FromBytes(byte[] buffer, int? offset = null, int? length = null)
+		public static Packet FromBytes(byte[] buffer, int offset = 0, int? length = null)
 		{
-			_buffer = new byte[length ?? buffer.Length];
-			Array.Copy(buffer, 0, _buffer, offset ?? 0, length ?? buffer.Length);
+			var trueLength = length ?? buffer.Length;
+			
+			var calculatedCrc = RUDP.Utils.Crc32.ComputeChecksum(buffer, offset, trueLength - 4);
+			var receivedCrc = (uint) (
+				(buffer[trueLength - 4 + 0] << 24) |
+				(buffer[trueLength - 4 + 1] << 16) |
+				(buffer[trueLength - 4 + 2] << 8) |
+				(buffer[trueLength - 4 + 3] << 0));
+			if (calculatedCrc != receivedCrc)
+				return null;
+			
+			var packet = new Packet
+			{
+				_buffer = new byte[length ?? buffer.Length]
+			};
+			Array.Copy(buffer, 0, packet._buffer, offset, trueLength);
+
+			return packet;
 		}
 
 		public static bool SequenceNumberGreaterThan(ushort s1, ushort s2)
@@ -212,6 +222,12 @@ namespace RUDP.Utils
 			return
 				((s1 > s2) && (s1 - s2 <= ushort.MaxValue / 2)) ||
 				((s1 < s2) && (s2 - s1 > ushort.MaxValue / 2));
+		}
+
+		public bool CheckIntegrity()
+		{
+			var crcCheck = RUDP.Utils.Crc32.ComputeChecksum(_buffer, 0, _buffer.Length - 4);
+			return crcCheck == Crc32;
 		}
 
 		public bool Validate(ushort appId, ushort lastSequenceNum)
@@ -239,8 +255,7 @@ namespace RUDP.Utils
 					break;
 			}
 
-			var crcCheck = RUDP.Utils.Crc32.ComputeChecksum(_buffer, 0, _buffer.Length - 4);
-			return crcCheck == Crc32;
+			return CheckIntegrity();
 		}
 	}
 }

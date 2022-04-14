@@ -585,14 +585,14 @@ namespace RUDP
 			_socket.Bind(new IPEndPoint(IPAddress.Any, RemoteEndpoint.Port));
 
 			// Sends connection request for client mode.
-			_socket.Send(new Packet()
+			_socket.Send(Packet.ToBytes(new Packet()
 				{
 					AppId = AppId,
 					SequenceNumber = _nextSeqNumber++,
 					AckSequenceNumber = 0,
 					AckBitfield = new Bitfield(4),
 					Type = PacketType.ConnectionRequest
-				}.ToBytes(),
+				}),
 				RemoteEndpoint);
 
 			_isActive = true;
@@ -622,7 +622,7 @@ namespace RUDP
 					int receiveCount = _socket.Receive(receiveBuffer, 0, receiveBuffer.Length, ref endPoint);
 
 					if (endPoint.Equals(RemoteEndpoint))
-						ReceiveUpdate(new Packet(receiveBuffer, 0, receiveCount));
+						ReceiveUpdate(Packet.FromBytes(receiveBuffer, 0, receiveCount));
 				}
 
 				if (_state == State.Connected)
@@ -632,7 +632,7 @@ namespace RUDP
 						{
 							_sendStopwatch.Restart();
 							Packet packet = SendUpdate();
-							_socket.Send(packet.ToBytes(), RemoteEndpoint);
+							_socket.Send(Packet.ToBytes(packet), RemoteEndpoint);
 						}
 
 				Thread.Yield();
