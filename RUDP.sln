@@ -1,13 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29728.190
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RUDP", "RUDP\RUDP.csproj", "{3F0FB14B-D841-4E28-9602-657157E81C42}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample_ChatConsoleApp", "Sample_ChatConsoleApp\Sample_ChatConsoleApp.csproj", "{8004020F-8F3F-4326-A266-F7F29ECE160A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample_ChatConsoleApp", "Sample_ChatConsoleApp\Sample_ChatConsoleApp.csproj", "{8004020F-8F3F-4326-A266-F7F29ECE160A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RUDP.Test", "RUDP.Test\RUDP.Test.csproj", "{AE093618-D566-4375-8933-2025238BE17D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RUDP.Test", "RUDP.Test\RUDP.Test.csproj", "{AE093618-D566-4375-8933-2025238BE17D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{68A4AAD5-CB2A-414F-BDBB-AD2E006120D7}"
+	ProjectSection(SolutionItems) = preProject
+		stylecop.json = stylecop.json
+		StyleCop.ruleset = StyleCop.ruleset
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
