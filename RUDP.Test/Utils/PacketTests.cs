@@ -1,4 +1,4 @@
-namespace RUDP.Test;
+namespace RUDP.Test.Utils;
 
 using System;
 using System.Reflection;
