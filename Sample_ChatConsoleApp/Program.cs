@@ -1,82 +1,86 @@
-﻿using System;
-using System.Diagnostics;
-using System.Net;
-using System.Text;
-using System.Threading;
-
-namespace Sample_ChatConsoleApp
+﻿namespace Sample_ChatConsoleApp
 {
-	class Program
+	using System;
+	using System.Net;
+
+	/// <summary>
+	/// Sample chat using RUDP protocol.
+	/// </summary>
+	internal static class Program
 	{
-		const string helpText =
+		private const string HelpText =
 			"Usage: Sample_ChatConsoleApp\n" +
 			"[-s server mode(default)] [-c name (client mode)]\n" +
 			"appid address:port\n";
 
-		const string invalidFormatText =
+		private const string InvalidFormatText =
 			"invalid format\n";
 
-		static bool _isServer = true;
-		static string _host;
-		static IPAddress _bindAddress;
-		static IPAddress _remoteAddress;
-		static int _port;
-		static ushort _appId;
-		static string _clientName;
-		
+		private static bool _isServer = true;
+		private static IPAddress _bindAddress;
+		private static IPAddress _remoteAddress;
+		private static int _port;
+		private static ushort _appId;
+		private static string _clientName;
 
-		static void Main(string[] args)
+		private static void Main(string[] args)
 		{
-			#region args Parsing
 			if (args.Length < 2)
 			{
-				Console.Write(helpText);
+				Console.Write(HelpText);
 				return;
 			}
 
-			for (int i = 0; i < args.Length - 2; i++)
+			for (var i = 0; i < args.Length - 2; i++)
 			{
-				if (String.Equals(args[i], "-s"))
-					_isServer = true;
-
-				if (String.Equals(args[i], "-c"))
+				if (string.Equals(args[i], "-s"))
 				{
-					_isServer = false;
-					_clientName = args[i + 1];
+					_isServer = true;
 				}
+
+				if (!string.Equals(args[i], "-c"))
+				{
+					continue;
+				}
+
+				_isServer = false;
+				_clientName = args[i + 1];
 			}
 
 			try
 			{
-				_appId = ushort.Parse(args[args.Length - 2]);
+				_appId = ushort.Parse(args[^2]);
 			}
 			catch
 			{
-				Console.Write("appid " + invalidFormatText);
+				Console.Write("appid " + InvalidFormatText);
 				return;
 			}
 
-			string[] endpointStrings = args[args.Length - 1].Split(':');
+			var endpointStrings = args[^1].Split(':');
 			if (endpointStrings.Length == 2)
 			{
 				try
 				{
 					if (_isServer)
+					{
 						_bindAddress = IPAddress.Parse(endpointStrings[0]);
+					}
 					else
+					{
 						_remoteAddress = IPAddress.Parse(endpointStrings[0]);
+					}
 
 					_port = int.Parse(endpointStrings[1]);
 				}
 				catch
 				{
-					Console.Write("address:port " + invalidFormatText);
+					Console.Write("address:port " + InvalidFormatText);
 					return;
 				}
 			}
-			#endregion
 
-			if(_isServer)
+			if (_isServer)
 			{
 				ChatServer chatServer = new ChatServer(_appId, new IPEndPoint(_bindAddress, _port));
 				chatServer.ServerMain();

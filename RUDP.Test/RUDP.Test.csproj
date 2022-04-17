@@ -5,7 +5,15 @@
         <Nullable>enable</Nullable>
 
         <IsPackable>false</IsPackable>
+        <CodeAnalysisRuleSet>.\StyleCop.ruleset</CodeAnalysisRuleSet>
     </PropertyGroup>
+
+    <ItemGroup>
+        <AdditionalFiles Include="..\stylecop.json" Link="stylecop.json">
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </AdditionalFiles>
+        <None Include=".\StyleCop.ruleset" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Bogus" Version="34.0.2" />

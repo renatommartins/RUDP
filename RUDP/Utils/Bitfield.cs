@@ -1,108 +1,70 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-using RUDP.Interfaces;
-
-namespace RUDP.Utils
+﻿namespace RUDP.Utils
 {
+	using System;
+	using System.Collections.Generic;
+
+	/// <summary>
+	/// Represents a bitfield.
+	/// </summary>
 	public class Bitfield
 	{
-		private bool[] bitfield;
+		private bool[] _bitfield;
 
-		public Bitfield()
-		{
-
-		}
-		
 		/// <summary>
-		/// Initializes an empty instance of Bitfield.
+		/// Initializes a new instance of the <see cref="Bitfield"/> class.
 		/// </summary>
-		/// <param name="byteSize">Size in bytes of the bitfield</param>
+		/// <param name="byteSize">Size in bytes of the bitfield.</param>
 		public Bitfield(int byteSize)
 		{
-			bitfield = new bool[byteSize * 8];
+			_bitfield = new bool[byteSize * 8];
 		}
 
-		public Bitfield(byte[] buffer, int offset, int length)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Bitfield"/> class.
+		/// </summary>
+		/// <param name="buffer">Sequence of bits to initialize the bitfield from.</param>
+		/// <param name="offset">Offset from where to start reading from in <paramref name="buffer"/> in bytes.</param>
+		/// <param name="length">Length of bytes to read from <paramref name="buffer"/>.</param>
+		public Bitfield(IReadOnlyList<byte> buffer, int offset = 0, int? length = 0)
 		{
-			FromBytes(buffer, offset, length);
+			var lengthToUse = length ?? buffer.Count;
+			FromBytesInternal(buffer, offset, lengthToUse);
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Bitfield"/> class.
+		/// </summary>
+		/// <param name="buffer">Sequence of bits to initialize the bitfield from.</param>
 		public Bitfield(ArraySegment<byte> buffer)
 		{
-			FromBytes(buffer.Array, buffer.Offset, buffer.Count);
+			FromBytesInternal(buffer.Array, buffer.Offset, buffer.Count);
 		}
-
-		public void SetSize(int byteSize)
-		{
-			bitfield = new bool[byteSize * 8];
-		}
-
-		public int GetSize()
-		{
-			var isByteMultiple = bitfield.Length % 8 == 0;
-			return bitfield.Length / 8 + (isByteMultiple? 0 : 1);
-		}
-
-		public int GetBitSize() => bitfield.Length;
 
 		/// <summary>
 		/// Gets of sets a bit inside the bitfield.
 		/// </summary>
-		/// <param name="index"></param>
-		/// <returns></returns>
+		/// <param name="index">Which bit in the bitfield, left to right.</param>
+		/// <returns>Value of the bit.</returns>
 		public bool this[int index]
 		{
-			get => bitfield[index];
-			set => bitfield[index] = value;
+			get => _bitfield[index];
+			set => _bitfield[index] = value;
 		}
 
 		/// <summary>
-		/// Shifts the bit field right by <paramref name="amount"/>.
+		/// Serializes the Bitfield to raw byte array.
 		/// </summary>
-		/// <param name="amount"></param>
-		public void ShiftRight(int amount)
+		/// <param name="bitfield">bitfield to be serialized into <see cref="T:byte[]"/>.</param>
+		/// <returns>Representation of the bitfield in <see cref="T:byte[]"/>.</returns>
+		public static byte[] ToBytes(Bitfield bitfield)
 		{
-			for (int j = 0; j < amount; j++)
-			{
-				for (int i = bitfield.Length - 1; i > 0; i--)
-				{
-					bitfield[i] = bitfield[i - 1];
-				}
-				bitfield[0] = false;
-			}
-		}
+			var returnArray = new byte[(int)Math.Ceiling((double)bitfield._bitfield.Length / 8)];
 
-		/// <summary>
-		/// Shifts the bit field left by <paramref name="amount"/>.
-		/// </summary>
-		/// <param name="amount"></param>
-		public void ShiftLeft(int amount)
-		{
-			for (int j = 0; j < amount; j++)
+			for (var i = 0; i < returnArray.Length; i++)
 			{
-				for (int i = 0; i < bitfield.Length - 1; i++)
+				for (var j = 0; j < 8; j++)
 				{
-					bitfield[i] = bitfield[i + 1];
-				}
-				bitfield[bitfield.Length - 1] = false;
-			}
-		}
-
-		/// <summary>
-		/// Serializes the Bitfield to raw byte array
-		/// </summary>
-		/// <returns></returns>
-		public byte[] ToBytes()
-		{
-			byte[] returnArray = new byte[(int)Math.Ceiling((double)bitfield.Length / 8)];
-
-			for (int i = 0; i < returnArray.Length; i++)
-			{
-				for (int j = 0; j < 8; j++)
-				{
-					byte value = (byte)(bitfield[i * 8 + j] ? 1 : 0);
+					var value = (byte)(bitfield._bitfield[(i * 8) + j] ? 1 : 0);
 					returnArray[i] |= (byte)(value << (7 - j));
 				}
 			}
@@ -111,29 +73,95 @@ namespace RUDP.Utils
 		}
 
 		/// <summary>
-		/// Deserializes a Bitfield from raw byte array
+		/// Deserializes <see cref="T:byte[]"/> into <see cref="Bitfield"/>.
 		/// </summary>
-		/// <param name="buffer"></param>
-		public void FromBytes(byte[] buffer)
+		/// <param name="buffer"><see cref="T:byte[]"/> to be deserialized.</param>
+		/// <param name="offset">Index offset in <paramref name="buffer"/> where to start deserializing from.</param>
+		/// <param name="length">Length of bytes to read from <paramref name="buffer"/>.</param>
+		/// <returns>Deserialized <see cref="Bitfield"/>.</returns>
+		public static Bitfield FromBytes(byte[] buffer, int offset = 0, int? length = null)
 		{
-			FromBytes(buffer, 0, buffer.Length);
+			var lengthToUse = length ?? buffer.Length;
+			var bitfield = new Bitfield(lengthToUse);
+			bitfield.FromBytesInternal(buffer, offset, lengthToUse);
+
+			return bitfield;
 		}
 
-		public void FromBytes(byte[] buffer, int offset, int length)
+		/// <summary>
+		/// Set bitfield size in bytes.
+		/// </summary>
+		/// <param name="byteSize">Size in bytes.</param>
+		public void SetSize(int byteSize)
 		{
-			bitfield = new bool[length * 8];
+			_bitfield = new bool[byteSize * 8];
+		}
 
-			for (int i = 0; i < length; i++)
+		/// <summary>
+		/// Gets size of the bitfield in bytes.
+		/// </summary>
+		/// <returns>Size in bytes.</returns>
+		public int GetSize()
+		{
+			var isByteMultiple = _bitfield.Length % 8 == 0;
+			return (_bitfield.Length / 8) + (isByteMultiple ? 0 : 1);
+		}
+
+		/// <summary>
+		/// Gets size of the bitfield in bits.
+		/// </summary>
+		/// <returns>Size in bits.</returns>
+		public int GetBitSize() => _bitfield.Length;
+
+		/// <summary>
+		/// Shifts the bit field right by <paramref name="amount"/>.
+		/// </summary>
+		/// <param name="amount">Distance in bits to shift.</param>
+		public void ShiftRight(int amount)
+		{
+			for (var j = 0; j < amount; j++)
 			{
-				for (int j = 0; j < 8; j++)
+				for (var i = _bitfield.Length - 1; i > 0; i--)
+				{
+					_bitfield[i] = _bitfield[i - 1];
+				}
+
+				_bitfield[0] = false;
+			}
+		}
+
+		/// <summary>
+		/// Shifts the bit field left by <paramref name="amount"/>.
+		/// </summary>
+		/// <param name="amount">Distance in bits to shift.</param>
+		public void ShiftLeft(int amount)
+		{
+			for (var j = 0; j < amount; j++)
+			{
+				for (var i = 0; i < _bitfield.Length - 1; i++)
+				{
+					_bitfield[i] = _bitfield[i + 1];
+				}
+
+				_bitfield[_bitfield.Length - 1] = false;
+			}
+		}
+
+		private void FromBytesInternal(IReadOnlyList<byte> buffer, int offset = 0, int length = 0)
+		{
+			_bitfield = new bool[length * 8];
+
+			for (var i = 0; i < length; i++)
+			{
+				for (var j = 0; j < 8; j++)
 				{
 					if ((buffer[i + offset] & 1 << (7 - j)) > 0)
 					{
-						bitfield[i * 8 + j] = true;
+						_bitfield[(i * 8) + j] = true;
 					}
 					else
 					{
-						bitfield[i * 8 + j] = false;
+						_bitfield[(i * 8) + j] = false;
 					}
 				}
 			}

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 namespace RUDP.Utils
 {
 	using System;
+	using System.Collections.Generic;
 	using RUDP.Enumerations;
 
 	/// <summary>
@@ -243,7 +244,7 @@ namespace RUDP.Utils
 			var trueLength = length ?? buffer.Length;
 
 			var calculatedCrc = RUDP.Utils.Crc32.ComputeChecksum(buffer, offset, trueLength - 4);
-			var receivedCrc = (uint) (
+			var receivedCrc = (uint)(
 				(buffer[trueLength - 4 + 0] << 24) |
 				(buffer[trueLength - 4 + 1] << 16) |
 				(buffer[trueLength - 4 + 2] << 8) |
@@ -276,51 +277,24 @@ namespace RUDP.Utils
 		}
 
 		/// <summary>
-		///
+		/// Gets list of sequence numbers acknowledged by this <see cref="Packet"/>.
 		/// </summary>
-		/// <returns></returns>
-		public bool CheckIntegrity()
+		/// <returns>List of acknowledged sequence numbers.</returns>
+		public List<ushort> GetAcknowledgedPackets()
 		{
-			var crcCheck = RUDP.Utils.Crc32.ComputeChecksum(_buffer, 0, _buffer.Length - 4);
-			return crcCheck == Crc32;
-		}
-
-		public bool Validate(ushort appId, ushort lastSequenceNum)
-		{
-			if (AppId != appId)
+			var returnList = new List<ushort>
 			{
-				return false;
+				AckSequenceNumber,
+			};
+			for (var i = 0; i < AckBitfield.GetBitSize(); i++)
+			{
+				if (AckBitfield[i])
+				{
+					returnList.Add((ushort)(AckSequenceNumber - i - 1));
+				}
 			}
 
-			if (!SequenceNumberGreaterThan(SequenceNumber, lastSequenceNum))
-			{
-				return false;
-			}
-
-			if (Type >= PacketType.Invalid)
-			{
-				return false;
-			}
-
-			switch (Type)
-			{
-				case PacketType.ConnectionAccept:
-					if (Data.Count < 2)
-					{
-						return false;
-					}
-
-					break;
-				case PacketType.Data:
-					if (Data.Count == 0)
-					{
-						return false;
-					}
-
-					break;
-			}
-
-			return CheckIntegrity();
+			return returnList;
 		}
 
 		private void CommitToBuffer()
@@ -349,7 +323,7 @@ namespace RUDP.Utils
 
 			// Ack Bitfield
 			_ackBitfield = _ackBitfield ?? new Bitfield(4);
-			Array.Copy(_ackBitfield.ToBytes(), 0, _buffer, AckBitfieldOffset, 4);
+			Array.Copy(Bitfield.ToBytes(_ackBitfield), 0, _buffer, AckBitfieldOffset, 4);
 
 			// PacketType
 			_buffer[TypeOffset + 0] = (byte)(((ushort?)_packetType ?? 0 & 0xFF00) >> 8);

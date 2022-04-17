@@ -1,104 +1,57 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Net;
-using System.Net.Sockets;
-using System.Diagnostics;
-
-using RUDP.Interfaces;
-using RUDP.Enumerations;
-using RUDP.Utils;
-
-namespace RUDP
+﻿namespace RUDP
 {
+	using System;
+	using System.Collections.Generic;
+	using System.Diagnostics;
+	using System.Linq;
+	using System.Net;
+	using System.Net.Sockets;
+	using System.Threading;
+	using RUDP.Enumerations;
+	using RUDP.Interfaces;
+	using RUDP.Utils;
+
 	/// <summary>
 	/// Reliable User Datagram Protocol listener/server implementation.
 	/// </summary>
-	public class RudpListener
+	public class RudpListener : RudpBase
 	{
-		/// <summary>
-		/// Application Identifier.
-		/// </summary>
-		public ushort AppId { get; private set; }
-		/// <summary>
-		/// Indicates if the listener is active.
-		/// </summary>
-		public bool Active { get; private set; }
-		/// <summary>
-		/// Number of packets sent per second.
-		/// </summary>
-		public int SendRate { get; private set; }
-		/// <summary>
-		/// Gets the local endpoint.
-		/// </summary>
-		public EndPoint LocalEndpoint { get; private set; }
-
-		/// <summary>
-		/// Contains the bound socket.
-		/// </summary>
-		private ISocket _socket;
-		/// <summary>
-		/// Communication handling thread.
-		/// </summary>
-		private Thread _listenerThread;
-		/// <summary>
-		/// Handles timing between sent packets.
-		/// </summary>
-		private Stopwatch _sendStopwatch;
 		/// <summary>
 		/// Contains all connected remote host through this listener.
 		/// </summary>
-		private Dictionary<IPEndPoint, RudpClient> _connectedClients = new Dictionary<IPEndPoint, RudpClient>();
+		private readonly List<RudpClient> _connectedClients = new List<RudpClient>();
+
 		/// <summary>
 		/// Remote host connection request list.
 		/// </summary>
-		private Queue<IPEndPoint> _pendingRequests;
+		private readonly Queue<IPEndPoint> _pendingRequests;
+
 		/// <summary>
 		/// List of accepted remote host connections to be replied.
 		/// </summary>
-		private List<(IPEndPoint, Packet)> _acceptReplyList = new List<(IPEndPoint, Packet)>();
-		
-		/// <summary>
-		/// Creates a new RudpListener instance.
-		/// </summary>
-		/// <param name="appId"></param>
-		/// <param name="port">socket port.</param>
-		/// <param name="sendRate">packet send rate per second.</param>
-		public RudpListener(ushort appId, int port, int sendRate) : this(appId, new IPEndPoint(IPAddress.Any, port), sendRate) { }
+		private readonly List<(IPEndPoint endPoint, Packet packet)> _acceptReplyList = new List<(IPEndPoint, Packet)>();
 
 		/// <summary>
-		/// Creates a new RudpListener instance.
+		/// Initializes a new instance of the <see cref="RudpListener"/> class.
 		/// </summary>
-		/// <param name="appId"></param>
-		/// <param name="address">IP address to bind to.</param>
-		/// <param name="port">socket port.</param>
-		/// <param name="sendRate">packet send rate per second.</param>
-		public RudpListener(ushort appId, IPAddress address, int port, int sendRate) : this(appId, new IPEndPoint(address, port), sendRate) { }
-
-		/// <summary>
-		/// Creates a new RudpListener instance.
-		/// </summary>
-		/// <param name="appId"></param>
-		/// <param name="endPoint">endpoint to bind to.</param>
-		/// <param name="sendRate">packet send rate per second.</param>
-		public RudpListener(ushort appId, IPEndPoint endPoint, int sendRate)
+		/// <param name="appId">Application identifier to help avoid mismatched and/or unwanted data.</param>
+		/// <param name="endPoint">Endpoint to bind to.</param>
+		/// <param name="sendRate">Packet send rate per second.</param>
+		/// <param name="socket">Socket instance to inject.</param>
+		public RudpListener(ushort appId, EndPoint endPoint, int sendRate, ISocket socket = null)
+			: base(appId, null, endPoint, UpdateMode.Thread)
 		{
+			_pendingRequests = new Queue<IPEndPoint>();
 			AppId = appId;
 			LocalEndpoint = endPoint;
 			SendRate = sendRate;
+			Socket = socket;
 		}
 
 		/// <summary>
-		/// Creates a new RudpListener instance.
+		/// Gets a value indicating whether it is active.
 		/// </summary>
-		/// <param name="appId"></param>
-		/// <param name="endPoint">endpoint to bind to.</param>
-		/// <param name="sendRate">packet send rate per second.</param>
-		/// <param name="socket">socket instance to replace the standard.</param>
-		public RudpListener(ushort appId, IPEndPoint endPoint, int sendRate, ISocket socket = null) : this(appId, endPoint, sendRate)
-		{
-			_socket = socket;
-		}
+		public new bool IsActive => base.IsActive;
 
 		/// <summary>
 		/// Accepts the first connection request from the pending connection requests.
@@ -107,29 +60,31 @@ namespace RUDP
 		public RudpClient AcceptClient()
 		{
 			// Checks if there is a connections request pending.
-			IPEndPoint endPoint = null;
+			IPEndPoint endPoint;
 			lock (_pendingRequests)
-				if (_pendingRequests.Count > 0)
-					endPoint = _pendingRequests.Dequeue();
-				else
+			{
+				if (_pendingRequests?.Count <= 0)
+				{
 					return null;
+				}
+
+				endPoint = _pendingRequests.Dequeue();
+			}
 
 			// Creates connection accept packet.
-			byte updateRate = (byte)SendRate;
-			byte version = 0;
-			Packet acceptPacket = new Packet()
+			var acceptPacket = new Packet()
 			{
 				AppId = AppId,
 				SequenceNumber = 0,
 				AckSequenceNumber = 0,
 				AckBitfield = new Bitfield(4),
 				Type = PacketType.ConnectionAccept,
-				Data = new ArraySegment<byte>(new [] { updateRate, version }),
+				Data = new ArraySegment<byte>(new[] { (byte)SendRate, RudpConstants.Version }),
 			};
 
 			// Create new RudpClient instance to represent remote host.
-			RudpClient client = new RudpClient(this, endPoint, 1);
-			_connectedClients.Add(endPoint, client);
+			var client = new RudpClient(this, endPoint, 1);
+			_connectedClients.Add(client);
 
 			// Enqueue connection accept reply to send on next send window.
 			_acceptReplyList.Add((endPoint, acceptPacket));
@@ -137,49 +92,33 @@ namespace RUDP
 			return client;
 		}
 
-		public void AllowNatTraversal(bool allowed)
-		{
-			throw new NotImplementedException();
-		}
-
 		/// <summary>
 		/// Indicates if there are connection requests pending.
 		/// </summary>
-		/// <returns>true if there is at leat one connection request pending.</returns>
+		/// <returns>true if there is at least one connection request pending.</returns>
 		public bool Pending()
 		{
-			if (!Active)
+			if (!IsActive)
+			{
 				throw new InvalidOperationException();
+			}
 
-			lock(_pendingRequests)
+			lock (_pendingRequests)
 			{
 				return _pendingRequests.Count > 0;
-			}			
-		}
-
-		/// <summary>
-		/// Start listening for connection requests.
-		/// </summary>
-		public void Start()
-		{
-			Start(0);
+			}
 		}
 
 		/// <summary>
 		/// Start listening for connection requests.
 		/// </summary>
 		/// <param name="backlog">limit of pending connection requests.</param>
-		public void Start(int backlog)
+		public void Start(int backlog = 0)
 		{
-			if (backlog != 0)
-				_pendingRequests = new Queue<IPEndPoint>(backlog);
-			else
-				_pendingRequests = new Queue<IPEndPoint>();
+			base.IsActive = true;
 
-			Active = true;
-
-			_listenerThread = new Thread(new ThreadStart(ListenerThread));
-			_listenerThread.Start();
+			UpdateThread = new Thread(ListenerThread);
+			UpdateThread.Start();
 		}
 
 		/// <summary>
@@ -187,115 +126,136 @@ namespace RUDP
 		/// </summary>
 		public void Stop()
 		{
-			Active = false;
-			lock (_sendStopwatch)
-				_sendStopwatch.Stop();
+			base.IsActive = false;
+			lock (SendStopwatch)
+			{
+				SendStopwatch.Stop();
+			}
 
-			lock(_pendingRequests)
+			lock (_pendingRequests)
 			{
 				_pendingRequests.Clear();
-				_pendingRequests = null;
 			}
 		}
 
 		/// <summary>
-		/// Implements communication logic in for server mode and listener. 
+		/// Implements communication logic in for server mode and listener.
 		/// </summary>
 		private void ListenerThread()
 		{
 			// Instantiates RudpInternalSocket if null and binds the actual socket
-			if (_socket == null)
-				_socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-			_socket.Bind(LocalEndpoint);
+			if (Socket == null)
+			{
+				Socket = new RudpInternalSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			}
 
-			_sendStopwatch = new Stopwatch();
-			_sendStopwatch.Start();
+			Socket.Bind(LocalEndpoint);
 
-			byte[] receiveBuffer = new byte[4096];
+			SendStopwatch = new Stopwatch();
+			SendStopwatch.Start();
+
+			var receiveBuffer = new byte[4096];
 
 			// Connection handling main loop for server mode and listener.
-			while (Active)
+			while (IsActive)
 			{
 				// Executes receive update
-				if (_socket.Available > 0)
+				if (Socket.Available > 0)
 				{
 					EndPoint remoteEndpoint = new IPEndPoint(IPAddress.Any, 0);
-					int receiveCount = _socket.Receive(receiveBuffer, 0, receiveBuffer.Length, ref remoteEndpoint);
+					var receiveCount = Socket.Receive(receiveBuffer, 0, receiveBuffer.Length, ref remoteEndpoint);
 
-					Packet packet = Packet.FromBytes(receiveBuffer, 0, receiveCount);
+					var packet = Packet.FromBytes(receiveBuffer, 0, receiveCount);
+
 					// Checks if the packet comes from an already connected remote host.
-					if(!_connectedClients.ContainsKey((IPEndPoint)remoteEndpoint))
+					if (!_connectedClients.Any(c => Equals(c.RemoteEndpoint, (IPEndPoint)remoteEndpoint)))
 					{
-						switch(packet.Type)
+						switch (packet.Type)
 						{
 							case PacketType.ConnectionRequest:
 								{
 									// Enqueues the request to be accepted later.
-									if (packet.Validate(AppId, ushort.MaxValue) && 
-										!_pendingRequests.Contains((IPEndPoint)remoteEndpoint))
-										lock (_pendingRequests)
+									lock (_pendingRequests)
+									{
+										if (ValidatePacket(packet, AppId, ushort.MaxValue) &&
+											!_pendingRequests.Contains((IPEndPoint)remoteEndpoint))
+										{
 											_pendingRequests.Enqueue((IPEndPoint)remoteEndpoint);
-									// Refuses the request if the request is invalid.
-									else
-										_socket.Send(
-											Packet.ToBytes(new Packet()
-											{
-												AppId = AppId,
-												SequenceNumber = 0,
-												AckSequenceNumber = 0,
-												AckBitfield = new Bitfield(4),
-												Type = PacketType.ConnectionRefuse
-											}),
-											remoteEndpoint
-											);
+										}
+
+										// Refuses the request if the request is invalid.
+										else
+										{
+											Socket.Send(
+												Packet.ToBytes(new Packet()
+												{
+													AppId = AppId,
+													SequenceNumber = 0,
+													AckSequenceNumber = 0,
+													AckBitfield = new Bitfield(4),
+													Type = PacketType.ConnectionRefuse,
+												}),
+												remoteEndpoint);
+										}
+									}
 								}
+
 								break;
 							case PacketType.DisconnectionNotify:
-								break;
+							case PacketType.ConnectionAccept:
+							case PacketType.ConnectionRefuse:
+							case PacketType.KeepAlive:
+							case PacketType.Data:
+							case PacketType.Invalid:
 							default:
-								break;
+								throw new ArgumentOutOfRangeException();
 						}
 					}
 					else
+					{
 						// Forwards the packet to the RudpClient instance that represents the remote host.
-						_connectedClients[(IPEndPoint)remoteEndpoint].ReceiveUpdate(packet);
-					
+						_connectedClients
+							.First(c => c.RemoteEndpoint.Equals(remoteEndpoint))
+							.ReceiveUpdate(packet);
+					}
 				}
 
-				lock (_sendStopwatch)
+				lock (SendStopwatch)
+				{
 					// Executes send update based on the send rate.
-					if (_sendStopwatch.ElapsedMilliseconds >= 1000/SendRate)
+					if (SendStopwatch.ElapsedMilliseconds >= 1000 / SendRate)
 					{
-						_sendStopwatch.Restart();
+						SendStopwatch.Restart();
 
 						// Sends all enqueued connection accept replies.
-						foreach ((IPEndPoint endpoint, Packet packet) reply in _acceptReplyList)
-							_socket.Send(Packet.ToBytes(reply.packet), reply.endpoint);
-
-						List<IPEndPoint> disconnectedClients = new List<IPEndPoint>();
-						foreach (var pair in _connectedClients)
-						{
-							// Gets the packet for this window of each client.
-							Packet packet = pair.Value.SendUpdate();
-
-							// Clears disconnected clients.
-							if (!pair.Value.Connected)
-								disconnectedClients.Add(pair.Key);
-
-							_socket.Send(Packet.ToBytes(packet), pair.Key);
-						}
-						foreach (IPEndPoint endPoint in disconnectedClients)
-							_connectedClients.Remove(endPoint);
-
+						_acceptReplyList
+							.ForEach(t => Socket.Send(Packet.ToBytes(t.packet), t.endPoint));
 						_acceptReplyList.Clear();
+
+						// Gets and sends the packet for this window of each client.
+						_connectedClients
+							.ForEach(c =>
+							{
+								var packet = c.SendUpdate();
+								Socket.Send(Packet.ToBytes(packet), c.RemoteEndpoint);
+							});
+
+						// Clears disconnected clients.
+						_connectedClients
+							.Where(c => c.State != ClientState.Connected)
+							.ToList()
+							.ForEach(c => _connectedClients.Remove(c));
 					}
+				}
 
 				Thread.Yield();
 			}
+
 			// Disconnects all remote host when closing the listener.
-			foreach (KeyValuePair<IPEndPoint, RudpClient> pair in _connectedClients)
-				_socket.Send(Packet.ToBytes(pair.Value.GetDisconnectPacket()), pair.Key);
-			_socket.Close();
+			_connectedClients
+				.ForEach(c => Socket.Send(Packet.ToBytes(c.GetDisconnectPacket()), c.RemoteEndpoint));
+
+			Socket.Close();
 		}
 	}
 }

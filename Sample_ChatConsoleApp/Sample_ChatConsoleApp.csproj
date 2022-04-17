@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <CodeAnalysisRuleSet>$(SolutionDir)\StyleCop.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,6 +11,16 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="..\stylecop.json" Link="stylecop.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </AdditionalFiles>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\StyleCop.ruleset" Link="StyleCop.ruleset" />
   </ItemGroup>
 
   <ItemGroup>
