@@ -92,8 +92,14 @@
 		/// Set bitfield size in bytes.
 		/// </summary>
 		/// <param name="byteSize">Size in bytes.</param>
+		/// <exception cref="ArgumentOutOfRangeException">When <paramref name="byteSize"/> is negative.</exception>
 		public void SetSize(int byteSize)
 		{
+			if (byteSize < 0)
+			{
+				throw new ArgumentOutOfRangeException();
+			}
+
 			_bitfield = new bool[byteSize * 8];
 		}
 
@@ -144,6 +150,50 @@
 				}
 
 				_bitfield[_bitfield.Length - 1] = false;
+			}
+		}
+
+		/// <summary>
+		/// Rotates the bit field right by <paramref name="amount"/>.
+		/// </summary>
+		/// <param name="amount">Distance in bits to rotate.</param>
+		public void RotateRight(int amount)
+		{
+			for (var i = 0; i < amount; i++)
+			{
+				var carry = _bitfield[0];
+				for (var j = 0; j < GetBitSize(); j++)
+				{
+					var nextIndex = j + 1;
+					if (nextIndex >= GetBitSize())
+					{
+						nextIndex = 0;
+					}
+
+					(_bitfield[nextIndex], carry) = (carry, _bitfield[nextIndex]);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Rotates the bit field left by <paramref name="amount"/>.
+		/// </summary>
+		/// <param name="amount">Distance in bits to rotate.</param>
+		public void RotateLeft(int amount)
+		{
+			for (var i = 0; i < amount; i++)
+			{
+				var carry = _bitfield[0];
+				for (var j = 0; j < GetBitSize(); j++)
+				{
+					var nextIndex = j - 1;
+					if (nextIndex < 0)
+					{
+						nextIndex = GetBitSize() - 1;
+					}
+
+					(_bitfield[nextIndex], carry) = (carry, _bitfield[nextIndex]);
+				}
 			}
 		}
 
